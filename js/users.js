@@ -3,6 +3,7 @@
 // ============================================================
 
 let users = [];
+let editingUserPermissions = [];
 let loginHistory = [];
 let activityLogs = [];
 let currentTab = 'users';
@@ -234,7 +235,7 @@ function openUserModal() {
     document.getElementById('modal-password').required = true;
     document.getElementById('password-hint').textContent = '';
     document.getElementById('modal-email').readOnly = false;
-    document.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
+    editingUserPermissions = [];
     toggleZonaField();
     document.getElementById('user-modal').classList.remove('hidden');
 }
@@ -251,11 +252,10 @@ function editUser(user) {
     document.getElementById('modal-password').required = false;
     document.getElementById('password-hint').textContent = '(kosongkan jika tidak diubah)';
 
-    // Set permissions
+    // Preserve existing internal permissions without exposing the optional
+    // permissions form in the user interface.
     const perms = user.permissions || [];
-    document.querySelectorAll('.perm-checkbox').forEach(cb => {
-        cb.checked = perms.includes(cb.value);
-    });
+    editingUserPermissions = [...perms];
 
     // Handle Moderator Role Display in Dropdown
     if (user.role === 'moderator' || perms.includes('IS_MODERATOR')) {
@@ -307,8 +307,6 @@ function setupUserForm() {
         const role = document.getElementById('modal-role').value;
         const zona_id = document.getElementById('modal-zona').value;
 
-        const permissions = Array.from(document.querySelectorAll('.perm-checkbox:checked')).map(cb => cb.value);
-
         if (!name || !email || !role) {
             Toast.warning('Mohon lengkapi semua field.');
             return;
@@ -325,17 +323,14 @@ function setupUserForm() {
         }
 
         let finalRole = role;
-        let finalPermissions = [...permissions];
+        let finalPermissions = editId
+            ? editingUserPermissions.filter(p => p !== 'IS_MODERATOR')
+            : (role === 'admin_zona' ? ['upload_single', 'upload_batch'] : []);
 
         // Handle Moderator bypass (save as super_admin + flag)
         if (role === 'moderator') {
             finalRole = 'super_admin';
-            if (!finalPermissions.includes('IS_MODERATOR')) {
-                finalPermissions.push('IS_MODERATOR');
-            }
-        } else {
-            // Remove flag if not moderator anymore
-            finalPermissions = finalPermissions.filter(p => p !== 'IS_MODERATOR');
+            finalPermissions = ['IS_MODERATOR'];
         }
 
         const userData = {
