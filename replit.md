@@ -50,3 +50,4 @@ Server berjalan di port **5000** dan melayani file HTML statis dari root.
 ## User Preferences
 
 - Bahasa Indonesia untuk komunikasi
+- Setiap update atau perbaikan yang selesai harus langsung di-commit dan di-push ke GitHub branch `replit-source`, tanpa menyertakan secret, database runtime, konfigurasi rclone, atau binary rclone.
