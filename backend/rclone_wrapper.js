@@ -33,6 +33,140 @@ const errorLogger = new StorageErrorLogger({
 });
 
 const createdDirsCache = new Set();
+const syncQueuePath = process.env.SYNC_QUEUE_PATH || path.resolve(__dirname, '..', 'data', 'storage-sync-queue.json');
+let syncQueueWorkerStarted = false;
+let syncQueueWorkerRunning = false;
+
+function readSyncQueue() {
+    try {
+        if (!fs.existsSync(syncQueuePath)) return [];
+        const parsed = JSON.parse(fs.readFileSync(syncQueuePath, 'utf8'));
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        console.error('[Sync Queue] Failed to read queue:', err.message);
+        return [];
+    }
+}
+
+function writeSyncQueue(queue) {
+    const parent = path.dirname(syncQueuePath);
+    fs.mkdirSync(parent, { recursive: true });
+    const tempPath = `${syncQueuePath}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(queue, null, 2));
+    fs.renameSync(tempPath, syncQueuePath);
+}
+
+function queueKey(storagePath) {
+    return storagePath;
+}
+
+function enqueueSyncJob({ storagePath, originalName, size }) {
+    const queue = readSyncQueue();
+    const existing = queue.find(job => queueKey(job.storagePath) === queueKey(storagePath));
+    if (existing) {
+        existing.originalName = originalName;
+        existing.size = size;
+        existing.updatedAt = new Date().toISOString();
+    } else {
+        queue.push({
+            storagePath,
+            originalName,
+            size,
+            attempts: 0,
+            nextAttemptAt: new Date().toISOString(),
+            lastError: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
+    }
+    writeSyncQueue(queue);
+    return queue;
+}
+
+function removeSyncJob(storagePath) {
+    const queue = readSyncQueue();
+    const nextQueue = queue.filter(job => queueKey(job.storagePath) !== queueKey(storagePath));
+    if (nextQueue.length !== queue.length) writeSyncQueue(nextQueue);
+}
+
+function isDue(job) {
+    return !job.nextAttemptAt || new Date(job.nextAttemptAt).getTime() <= Date.now();
+}
+
+function retryDelayForSyncJob(attempts, error) {
+    // CAPTCHA/precreate failures are not useful to retry every few seconds.
+    // Keep them queued and retry later after the user refreshes the Alist
+    // Terabox session. Network failures can retry sooner.
+    if (/captcha|verification|precreate|4000023|405/i.test(error?.message || '')) {
+        return 30 * 60 * 1000;
+    }
+    return Math.min(60 * 60 * 1000, Math.max(60 * 1000, 2 ** Math.min(attempts, 6) * 1000));
+}
+
+async function remoteFileExists(storagePath) {
+    const token = await getAlistToken();
+    const response = await fetch(`${alistDomain}/api/fs/get`, {
+        method: 'POST',
+        headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path: alistPath(storagePath) }),
+        signal: AbortSignal.timeout(30 * 1000)
+    });
+    const data = await response.json();
+    return response.ok && data.code === 200 && Boolean(data.data?.raw_url);
+}
+
+async function processSyncQueue() {
+    if (syncQueueWorkerRunning) return;
+    syncQueueWorkerRunning = true;
+    try {
+        const queue = readSyncQueue();
+        const dueJobs = queue.filter(isDue).slice(0, 3);
+        for (const job of dueJobs) {
+            try {
+                if (await remoteFileExists(job.storagePath)) {
+                    console.log(`[Sync Queue] Remote file already exists: ${job.storagePath}`);
+                    removeSyncJob(job.storagePath);
+                    continue;
+                }
+
+                const buffer = await LocalStorage.downloadBuffer(job.storagePath);
+                await RcloneStorage.uploadDirect(buffer, job.originalName, job.storagePath);
+
+                if (!(await remoteFileExists(job.storagePath))) {
+                    throw new Error('Upload returned success but remote verification failed');
+                }
+
+                console.log(`[Sync Queue] ✅ Remote upload verified: ${job.storagePath}`);
+                removeSyncJob(job.storagePath);
+            } catch (err) {
+                const currentQueue = readSyncQueue();
+                const current = currentQueue.find(item => queueKey(item.storagePath) === queueKey(job.storagePath));
+                if (!current) continue;
+                current.attempts = Number(current.attempts || 0) + 1;
+                current.lastError = err.message;
+                current.nextAttemptAt = new Date(Date.now() + retryDelayForSyncJob(current.attempts, err)).toISOString();
+                current.updatedAt = new Date().toISOString();
+                writeSyncQueue(currentQueue);
+                console.warn(`[Sync Queue] Deferred ${job.originalName}: ${err.message}`);
+            }
+        }
+    } finally {
+        syncQueueWorkerRunning = false;
+    }
+}
+
+function startSyncQueueWorker() {
+    if (syncQueueWorkerStarted) return;
+    syncQueueWorkerStarted = true;
+    const timer = setInterval(() => {
+        processSyncQueue().catch(err => console.error('[Sync Queue] Worker failed:', err.message));
+    }, 5 * 60 * 1000);
+    timer.unref();
+    processSyncQueue().catch(err => console.error('[Sync Queue] Initial run failed:', err.message));
+}
 
 /**
  * Diagnostic logging helper with context information.
@@ -211,6 +345,7 @@ const RcloneStorage = {
         const storagePath = this.buildStoragePath(zonaKode, tokoKode, category, originalName);
         
         console.log(`[Background Upload] Starting upload for ${originalName}`);
+        enqueueSyncJob({ storagePath, originalName, size: fileBuffer.length });
         
         // Log operation start
         errorLogger.logOperation('background_upload_start', {
@@ -255,6 +390,7 @@ const RcloneStorage = {
             // Success after retry(ies)
             const successMsg = `[Background Upload] SUCCESS for ${originalName} after ${result.attempts} attempts`;
             console.log(successMsg);
+            removeSyncJob(storagePath);
             
             // Log successful completion
             errorLogger.logOperation('background_upload_success', {
@@ -723,6 +859,20 @@ const RcloneStorage = {
     },
 
     /**
+     * Return pending automatic uploads without exposing file contents.
+     */
+    getPendingSyncJobs() {
+        return readSyncQueue();
+    },
+
+    /**
+     * Trigger a queue pass after the Terabox session is refreshed.
+     */
+    processPendingSyncJobs() {
+        return processSyncQueue();
+    },
+
+    /**
      * List all files in a directory via Rclone
      */
     async listFiles(storagePath) {
@@ -790,6 +940,7 @@ async function initializeRcloneCredentials() {
             config_source: rcloneConfig.source
         });
         console.log('✅ [RcloneStorage] Alist API and rclone configured for Terabox');
+        startSyncQueueWorker();
 
         return {
             success: true,
