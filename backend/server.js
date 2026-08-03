@@ -1214,7 +1214,9 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
             .then(() => console.log(`[Upload] Local storage upload complete for: ${req.file.originalname}`))
             .catch(err => console.error(`[Upload] Local storage upload failed:`, err.message));
         
-        // Secondary: Try Rclone/Terabox for backup (Fire and forget, but track sync status)
+        // Secondary: Try Rclone/Terabox for backup (fire and forget).
+        // Sync metadata is intentionally not written to `files`: the deployed
+        // schema does not include optional sync-status columns.
         RcloneStorage.uploadInBackground(
             fileBuffer,
             req.file.originalname,
@@ -1222,42 +1224,11 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
             tokoKode,
             category || 'PPN'
         )
-        .then(async (syncResult) => {
-            // After background upload completes, update database with sync status
-            if (syncResult && (syncResult.success !== undefined || syncResult.syncAttempts !== undefined)) {
-                try {
-                    // Find the file record by storage_path to get the file ID
-                    const { data: fileData } = await supabase
-                        .from('files')
-                        .select('id')
-                        .eq('storage_path', storagePath)
-                        .single();
-                    
-                    if (fileData && fileData.id) {
-                        // Keep the upload compatible with existing database schemas.
-                        // `sync_error` is optional in the current files table and may
-                        // not exist in the deployed schema cache.
-                        const updateFields = {};
-                        
-                        if (syncResult.success) {
-                            updateFields.synced = true;
-                            updateFields.synced_at = new Date().toISOString();
-                        } else {
-                            updateFields.synced = false;
-                        }
-                        
-                        if (Object.keys(updateFields).length > 0) {
-                            await supabase
-                                .from('files')
-                                .update(updateFields)
-                                .eq('id', fileData.id);
-                        }
-                        
-                        console.log(`[Upload] Database updated for ${req.file.originalname}: synced=${syncResult.success}, attempts=${syncResult.syncAttempts}`);
-                    }
-                } catch (dbErr) {
-                    console.error(`[Upload] Failed to update database with sync status:`, dbErr.message);
-                }
+        .then(syncResult => {
+            if (syncResult?.success) {
+                console.log(`[Upload] Rclone backup upload complete for: ${req.file.originalname}`);
+            } else {
+                console.warn(`[Upload] Rclone backup upload did not complete for: ${req.file.originalname}`);
             }
         })
         .catch(err => console.warn(`[Upload] Rclone backup upload failed:`, err.message));
@@ -1278,10 +1249,7 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 tipe_ppn: finalTipePPN,
                 no_invoice: req.body.no_invoice,
                 total_jual: finalNominal,
-                status: finalStatus,
-                // Do not include optional sync_error here: older databases do not
-                // have that column and would reject the entire upload insert.
-                synced: false
+                status: finalStatus
             })
             .select()
             .single();
