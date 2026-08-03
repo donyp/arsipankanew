@@ -59,6 +59,17 @@ const LocalStorage = {
     },
 
     /**
+     * Create a readable stream from local storage.
+     */
+    createReadStream(storagePath) {
+        const fullPath = path.join(DATA_DIR, storagePath);
+        if (!fs.existsSync(fullPath)) {
+            throw new Error(`File not found: ${storagePath}`);
+        }
+        return fs.createReadStream(fullPath);
+    },
+
+    /**
      * Delete file from local storage
      */
     async deleteFile(storagePath) {

@@ -1209,10 +1209,16 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         // Background Upload (Fire and FORGET to unblock UI)
         const fileBuffer = Buffer.from(req.file.buffer);
         
-        // Primary: Upload to Local Storage (reliable, immediate)
-        LocalStorage.uploadDirect(fileBuffer, req.file.originalname, storagePath)
-            .then(() => console.log(`[Upload] Local storage upload complete for: ${req.file.originalname}`))
-            .catch(err => console.error(`[Upload] Local storage upload failed:`, err.message));
+        // Primary: Upload to Local Storage before creating the DB record.
+        // This guarantees preview remains available even if Terabox rejects
+        // the background sync (for example while a CAPTCHA is required).
+        try {
+            await LocalStorage.uploadDirect(fileBuffer, req.file.originalname, storagePath);
+            console.log(`[Upload] Local storage upload complete for: ${req.file.originalname}`);
+        } catch (localErr) {
+            console.error(`[Upload] Local storage upload failed:`, localErr.message);
+            throw new Error(`Penyimpanan lokal gagal: ${localErr.message}`);
+        }
         
         // Secondary: Try Rclone/Terabox for backup (fire and forget).
         // Sync metadata is intentionally not written to `files`: the deployed

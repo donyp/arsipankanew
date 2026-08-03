@@ -8,6 +8,7 @@ const fs = require('fs');
 const { getSecret } = require('./secretManager');
 const { retryWithBackoff, shouldRetryError } = require('./retryLogic');
 const StorageErrorLogger = require('./storageErrorLogger');
+const LocalStorage = require('./local_storage');
 
 // Configuration for direct Rclone WebDAV connection
 let rcloneConfig = {
@@ -15,6 +16,14 @@ let rcloneConfig = {
     teraboxPass: process.env.TERABOX_PASS || 'terabox_pass',
     source: 'ENV_VAR_OR_HARDCODED'
 };
+
+const alistDomain = process.env.ALIST_URL || 'http://127.0.0.1:5244';
+const alistCredentials = {
+    username: process.env.ALIST_ADMIN_USERNAME || 'admin',
+    password: process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!',
+    source: 'FALLBACK'
+};
+let alistTokenCache = { token: null, expiry: 0 };
 
 // Initialize error logger
 const errorLogger = new StorageErrorLogger({
@@ -77,6 +86,50 @@ function rcloneSpawn(args) {
     return spawn(rclonePath, finalArgs);
 }
 
+async function loginToAlist() {
+    const response = await fetch(`${alistDomain}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: alistCredentials.username,
+            password: alistCredentials.password
+        })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.data?.token) {
+        throw new Error(`Alist authentication failed: ${data.message || `HTTP ${response.status}`}`);
+    }
+    alistTokenCache = {
+        token: data.data.token,
+        expiry: Date.now() + 23 * 60 * 60 * 1000
+    };
+    return alistTokenCache.token;
+}
+
+async function getAlistToken() {
+    if (alistTokenCache.token && Date.now() < alistTokenCache.expiry) {
+        return alistTokenCache.token;
+    }
+    return loginToAlist();
+}
+
+function alistPath(storagePath) {
+    const cleanPath = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
+    return `/terabox${cleanPath}`;
+}
+
+async function readAlistResponse(response, operation) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch (_) {
+        if (/captcha|verification code|verification/i.test(text)) {
+            throw new Error(`Alist/Terabox meminta CAPTCHA saat ${operation}; upload remote tidak dapat dilanjutkan.`);
+        }
+        throw new Error(`Alist mengembalikan respons tidak valid saat ${operation} (HTTP ${response.status}).`);
+    }
+}
+
 const RcloneStorage = {
     /**
      * Get a file from Terabox via Rclone.
@@ -88,27 +141,33 @@ const RcloneStorage = {
             storagePath: storagePath
         });
 
-        const remotePath = `${PRIMARY_REMOTE}:${storagePath}`;
-        const child = rcloneSpawn(['cat', remotePath]);
-        if (!child.stdout) {
-            throw new Error('Rclone tidak menghasilkan output stream.');
-        }
-
-        let stderr = '';
-        child.stderr?.on('data', data => {
-            stderr += data.toString();
-        });
-        child.on('error', err => {
-            child.stdout.destroy(err);
-        });
-        child.on('close', code => {
-            if (code !== 0 && !child.stdout.destroyed) {
-                child.stdout.destroy(new Error(stderr || `Rclone cat exited with code ${code}`));
+        try {
+            const token = await getAlistToken();
+            const response = await fetch(`${alistDomain}/api/fs/get`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ path: alistPath(storagePath) })
+            });
+            const data = await response.json();
+            if (!response.ok || data.code !== 200 || !data.data?.raw_url) {
+                throw new Error(`Alist file lookup failed: ${data.message || `HTTP ${response.status}`}`);
             }
-        });
 
-        // Express membutuhkan Readable stream, bukan object ChildProcess.
-        return child.stdout;
+            const fileResponse = await fetch(data.data.raw_url);
+            if (!fileResponse.ok || !fileResponse.body) {
+                throw new Error(`Alist file stream failed: HTTP ${fileResponse.status}`);
+            }
+            return require('stream').Readable.fromWeb(fileResponse.body);
+        } catch (remoteError) {
+            if (LocalStorage.fileExists(storagePath)) {
+                console.warn(`[Storage] Terabox preview unavailable; serving local copy for ${storagePath}: ${remoteError.message}`);
+                return LocalStorage.createReadStream(storagePath);
+            }
+            throw remoteError;
+        }
     },
 
     /**
@@ -252,77 +311,42 @@ const RcloneStorage = {
                 storagePath: storagePath 
             });
 
-            // 1. Create Parent Directory using rclone
+            // Alist's filesystem API supports writes reliably for this
+            // WebDAV-backed Terabox storage; rclone rcat returns HTTP 405.
             const parentFolderPath = storagePath.substring(0, storagePath.lastIndexOf('/'));
-
             if (!createdDirsCache.has(parentFolderPath)) {
-                logOperation('uploadDirect', { 
-                    action: 'Creating directory',
-                    path: parentFolderPath 
-                });
                 try {
                     await rcloneExec(['mkdir', `${PRIMARY_REMOTE}:${parentFolderPath}`]);
                     createdDirsCache.add(parentFolderPath);
                 } catch (err) {
-                    const errMsg = err.message || '';
-                    console.warn(`[Upload] rclone mkdir returned an error: ${errMsg}`);
-                    if (errMsg.toLowerCase().includes('409') || errMsg.toLowerCase().includes('conflict')) {
-                        console.log(`[Upload] Detected 409/Conflict for ${parentFolderPath}, treating as existing directory.`);
+                    const message = err.message || '';
+                    if (/409|conflict|already exists/i.test(message)) {
                         createdDirsCache.add(parentFolderPath);
                     } else {
                         throw err;
                     }
                 }
             }
-
-            // 2. Upload file using rclone rcat (pipe content)
-            logOperation('uploadDirect', { 
-                action: 'Uploading file via rclone',
-                filename: originalName,
-                storagePath: storagePath
+            const token = await getAlistToken();
+            const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': token,
+                    'File-Path': encodeURIComponent(alistPath(storagePath))
+                },
+                body: fileBuffer,
+                signal: AbortSignal.timeout(10 * 60 * 1000)
             });
-
-            const remotePath = `${PRIMARY_REMOTE}:${storagePath}`;
-            
-            await new Promise((resolve, reject) => {
-                const child = spawn(rclonePath, ['--config', configPath, 'rcat', remotePath]);
-                let errorOutput = '';
-                
-                child.stderr.on('data', (data) => {
-                    errorOutput += data.toString();
-                });
-                
-                child.on('close', (code) => {
-                    if (code === 0) {
-                        resolve();
-                    } else {
-                        reject(new Error(`Rclone upload failed with code ${code}: ${errorOutput}`));
-                    }
-                });
-
-                child.on('error', reject);
-                child.stdin.write(fileBuffer);
-                child.stdin.end();
-            });
+            const putData = await readAlistResponse(putResponse, 'mengupload file');
+            if (!putResponse.ok || putData.code !== 200) {
+                throw new Error(`Alist API upload failed: ${putData.message || `HTTP ${putResponse.status}`}`);
+            }
 
             logOperation('uploadDirect', { 
                 status: '✅ Upload successful',
                 filename: originalName,
                 storagePath: storagePath 
             });
-
-            // 3. Backup to Storj (fire and forget via rcat)
-            const backupDest = `${BACKUP_REMOTE}:${storagePath}`;
-            const backupPromise = new Promise((resolve, reject) => {
-                const child = spawn(rclonePath, ['--config', configPath, 'rcat', backupDest]);
-                child.on('close', (code) => code === 0 ? resolve() : reject(new Error('Backup rcat failed')));
-                child.on('error', reject);
-                child.stdin.write(fileBuffer);
-                child.stdin.end();
-            });
-            backupPromise
-                .then(() => console.log(`[Rclone] Backup to Storj complete.`))
-                .catch(err => console.warn(`[Rclone] Backup failed (non-critical):`, err.message));
 
             return { storagePath, size: fileBuffer.length };
         } catch (err) {
@@ -351,7 +375,8 @@ const RcloneStorage = {
                 storagePath: storagePath 
             });
 
-            // 1. Create Parent Directory
+            // Keep directory creation through rclone, but upload the file through
+            // Alist's filesystem API because WebDAV rcat is not supported.
             const parentFolderPath = storagePath.substring(0, storagePath.lastIndexOf('/'));
 
             if (!createdDirsCache.has(parentFolderPath)) {
@@ -374,35 +399,25 @@ const RcloneStorage = {
                 }
             }
 
-            // 2. Upload file
+            const token = await getAlistToken();
             logOperation('uploadMedia', { 
                 action: 'Uploading file',
                 filename: originalName,
                 category: category
             });
-
-            const remotePath = `${PRIMARY_REMOTE}:${storagePath}`;
-            
-            await new Promise((resolve, reject) => {
-                const child = spawn(rclonePath, ['--config', configPath, 'rcat', remotePath]);
-                let errorOutput = '';
-                
-                child.stderr.on('data', (data) => {
-                    errorOutput += data.toString();
-                });
-                
-                child.on('close', (code) => {
-                    if (code === 0) {
-                        resolve();
-                    } else {
-                        reject(new Error(`Rclone upload failed with code ${code}: ${errorOutput}`));
-                    }
-                });
-
-                child.on('error', reject);
-                child.stdin.write(fileBuffer);
-                child.stdin.end();
+            const putResponse = await fetch(`${alistDomain}/api/fs/put`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': token,
+                    'File-Path': encodeURIComponent(alistPath(storagePath))
+                },
+                body: fileBuffer,
+                signal: AbortSignal.timeout(10 * 60 * 1000)
             });
+            const putData = await readAlistResponse(putResponse, 'mengupload media');
+            if (!putResponse.ok || putData.code !== 200) {
+                throw new Error(`Alist API upload failed: ${putData.message || `HTTP ${putResponse.status}`}`);
+            }
 
             logOperation('uploadMedia', { 
                 status: '✅ Media upload successful',
@@ -410,17 +425,6 @@ const RcloneStorage = {
                 category: category,
                 storagePath: storagePath 
             });
-
-            // 3. Backup (fire and forget)
-            const backupDest = `${BACKUP_REMOTE}:${storagePath}`;
-            const backupPromise = new Promise((resolve, reject) => {
-                const child = spawn(rclonePath, ['--config', configPath, 'rcat', backupDest]);
-                child.on('close', (code) => code === 0 ? resolve() : reject(new Error('Backup rcat failed')));
-                child.on('error', reject);
-                child.stdin.write(fileBuffer);
-                child.stdin.end();
-            });
-            backupPromise.catch(err => console.warn(`[Rclone] Media backup failed:`, err.message));
 
             return { storagePath, size: fileBuffer.length };
         } catch (err) {
@@ -704,6 +708,11 @@ const RcloneStorage = {
      * Check if a file exists on primary storage.
      */
     async checkFileExists(storagePath) {
+        // A newly uploaded file remains valid locally while Terabox sync is
+        // blocked by an upstream CAPTCHA or temporary write failure.
+        if (LocalStorage.fileExists(storagePath)) {
+            return true;
+        }
         try {
             const remotePath = `${PRIMARY_REMOTE}:${storagePath}`;
             await rcloneExec(['ls', remotePath]);
@@ -767,21 +776,25 @@ async function initializeRcloneCredentials() {
     console.log('🔐 [RcloneStorage] Initializing storage credentials...');
 
     try {
-        // For direct Rclone WebDAV, credentials are handled by rclone.conf
-        // This is a placeholder for future Secret Manager integration if needed
-        
-        rcloneConfig.source = 'RCLONE_CONF';
+        const password = await getSecret(
+            'arsip-alist-password',
+            'ALIST_ADMIN_PASSWORD',
+            'AdminArsip2026!'
+        );
+        alistCredentials.password = password;
+        alistCredentials.source = process.env.ALIST_ADMIN_PASSWORD ? 'ENV' : 'SECRET_OR_FALLBACK';
+        rcloneConfig.source = 'RCLONE_CONF + ALIST_API';
         
         logOperation('initializeRcloneCredentials', { 
-            status: '✅ Rclone configured via rclone.conf',
-            config_source: 'RCLONE_CONF'
+            status: '✅ Alist API and rclone configured',
+            config_source: rcloneConfig.source
         });
-        console.log('✅ [RcloneStorage] Rclone configured and ready (Direct WebDAV to Terabox)');
+        console.log('✅ [RcloneStorage] Alist API and rclone configured for Terabox');
 
         return {
             success: true,
-            source: 'RCLONE_CONF',
-            message: 'Rclone Direct WebDAV configured'
+            source: rcloneConfig.source,
+            message: 'Alist API and rclone configured'
         };
     } catch (err) {
         logOperation('initializeRcloneCredentials', { 
