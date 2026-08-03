@@ -877,6 +877,10 @@ app.post('/api/files/:id/share', authenticateToken, async (req, res) => {
 // POST /api/files/:id/acknowledge - mark file as read
 app.post('/api/files/:id/acknowledge', authenticateToken, async (req, res) => {
     try {
+        if (req.user.role !== 'admin_zona') {
+            return res.status(403).json({ error: 'Hanya Admin Zona yang dapat menandai file sebagai sudah dibaca.' });
+        }
+
         const { data: file, error } = await supabase
             .from('files')
             .select('*')
@@ -901,11 +905,12 @@ app.post('/api/files/:id/acknowledge', authenticateToken, async (req, res) => {
         }
 
         if (newStatus !== file.status) {
-            await supabase
+            const { error: updateError } = await supabase
                 .from('files')
                 .update({ status: newStatus })
                 .eq('id', file.id);
 
+            if (updateError) throw updateError;
             console.log(`[Acknowledge] File ${file.id} marked as ${newStatus} by ${req.user.userId}`);
         }
 

@@ -1132,6 +1132,22 @@ async function submitBugReport() {
 }
 
 // ---- Preview via PDF.js ----
+let previewFileId = null;
+
+function handlePreviewLoaded() {
+    document.getElementById('preview-loading')?.classList.add('hidden');
+
+    // Mark the file only after the requested document has actually loaded in
+    // the iframe. Loading about:blank while resetting the modal must not count
+    // as a preview.
+    const iframe = document.getElementById('preview-iframe');
+    if (previewFileId && iframe?.src && !iframe.src.endsWith('about:blank')) {
+        const fileId = previewFileId;
+        previewFileId = null;
+        acknowledgeFile(fileId);
+    }
+}
+
 function openPreview(fileId, fileName) {
     try {
         const modal = document.getElementById('preview-modal');
@@ -1147,6 +1163,7 @@ function openPreview(fileId, fileName) {
         if (title) title.textContent = fileName;
 
         // Reset iframe to avoid showing previous document
+        previewFileId = null;
         iframe.src = 'about:blank';
 
         const loading = document.getElementById('preview-loading');
@@ -1165,6 +1182,7 @@ function openPreview(fileId, fileName) {
         // Wait for the browser to paint the modal at full size, then load the PDF
         requestAnimationFrame(() => {
             setTimeout(() => {
+                previewFileId = fileId;
                 iframe.src = viewUrl;
             }, 400);
         });
@@ -1178,6 +1196,7 @@ function openPreview(fileId, fileName) {
 function closePreview() {
     const modal = document.getElementById('preview-modal');
     const iframe = document.getElementById('preview-iframe');
+    previewFileId = null;
     modal.classList.add('hidden');
     iframe.src = 'about:blank'; // Clear src to stop loading
     document.body.style.overflow = '';
