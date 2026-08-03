@@ -2054,14 +2054,16 @@ async function toggleMaintenance() {
                         <option value="Lainnya">Lainnya</option>
                     </select>
                 </div>
-                <div id="maint-details-container" class="space-y-3 max-h-[280px] sm:max-h-[340px] overflow-y-auto pr-1 custom-scrollbar">
+                <div id="maint-details-container" class="space-y-3">
                     <label class="block text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-bold">Detail Perbaikan</label>
-                    <div class="maint-detail-item rounded-2xl border border-gray-200 bg-gray-50/70 p-3">
-                        <div class="flex items-center gap-2">
-                            <span class="maint-detail-number w-7 h-7 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black">1.</span>
-                            <input type="text" class="maint-detail-summary flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Ringkasan perbaikan...">
+                    <div id="maint-detail-list" class="space-y-3">
+                        <div class="maint-detail-item rounded-2xl border border-gray-200 bg-gray-50/70 p-3">
+                            <div class="flex items-center gap-2">
+                                <span class="maint-detail-number w-7 h-7 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black">1.</span>
+                                <input type="text" class="maint-detail-summary flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Ringkasan perbaikan...">
+                            </div>
+                            <input type="text" class="maint-detail-description mt-2 ml-9 w-[calc(100%-2.25rem)] bg-white border border-gray-200 rounded-lg px-3 py-2 text-[11px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Detail penjelasan (subteks, opsional)...">
                         </div>
-                        <input type="text" class="maint-detail-description mt-2 ml-9 w-[calc(100%-2.25rem)] bg-white border border-gray-200 rounded-lg px-3 py-2 text-[11px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Detail penjelasan (subteks, opsional)...">
                     </div>
                 </div>
                 <button type="button" id="btn-add-detail" title="Tambah detail perbaikan" aria-label="Tambah detail perbaikan" class="mx-auto w-10 h-10 rounded-full border border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-500 hover:text-indigo-600 text-xl font-bold transition-all flex items-center justify-center">
@@ -2108,13 +2110,20 @@ async function toggleMaintenance() {
         // Handle dynamic detail inputs
         setTimeout(() => {
             const addBtn = document.getElementById('btn-add-detail');
-            const container = document.getElementById('maint-details-container');
+            const container = document.getElementById('maint-detail-list');
             if (addBtn && container) {
                 const renumberDetails = () => {
                     container.querySelectorAll('.maint-detail-item').forEach((item, index) => {
                         const number = item.querySelector('.maint-detail-number');
                         if (number) number.textContent = `${index + 1}.`;
                     });
+                };
+                const updateDetailScroll = () => {
+                    const shouldScroll = container.querySelectorAll('.maint-detail-item').length > 2;
+                    container.style.maxHeight = shouldScroll ? '240px' : '';
+                    container.style.overflowY = shouldScroll ? 'auto' : '';
+                    container.style.paddingRight = shouldScroll ? '4px' : '';
+                    container.classList.toggle('custom-scrollbar', shouldScroll);
                 };
 
                 addBtn.onclick = () => {
@@ -2124,7 +2133,7 @@ async function toggleMaintenance() {
                         <div class="flex items-center gap-2">
                             <span class="maint-detail-number w-7 h-7 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black"></span>
                             <input type="text" class="maint-detail-summary flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Ringkasan perbaikan...">
-                            <button type="button" title="Hapus detail" aria-label="Hapus detail" onclick="this.closest('.maint-detail-item').remove(); this.closest('#maint-details-container')?.querySelectorAll('.maint-detail-item').forEach((item, index) => item.querySelector('.maint-detail-number').textContent = (index + 1) + '.')" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                            <button type="button" data-remove-detail title="Hapus detail" aria-label="Hapus detail" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
@@ -2132,8 +2141,15 @@ async function toggleMaintenance() {
                     `;
                     container.appendChild(div);
                     renumberDetails();
+                    div.querySelector('[data-remove-detail]')?.addEventListener('click', () => {
+                        div.remove();
+                        renumberDetails();
+                        updateDetailScroll();
+                    });
+                    updateDetailScroll();
                     div.querySelector('.maint-detail-summary')?.focus();
                 };
+                updateDetailScroll();
             }
         }, 100);
 
