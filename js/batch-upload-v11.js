@@ -99,7 +99,7 @@ function processExcelData(json) {
 
         return {
             id: index,
-            tanggal: row[dateKey] || '',
+            tanggal: normalizeBatchDate(row[dateKey]),
             no_invoice: row[invKey] || '',
             total: parseMoney(row[totalKey], ''),
             konsumen: row[storeKey] || '-',
@@ -239,11 +239,26 @@ async function uploadRow(row, batchId) {
 }
 
 function formatDateToISO(e) {
-    if (!e) return new Date().toISOString();
+    if (!e) return new Date().toISOString().split('T')[0];
     if (typeof e === 'number') { try { const d = XLSX.SSF.parse_date_code(e); return new Date(d.y, d.m - 1, d.d).toISOString(); } catch (err) { } }
     const s = String(e).trim();
+    const slashOrDash = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if (slashOrDash) {
+        const day = parseInt(slashOrDash[1], 10);
+        const month = parseInt(slashOrDash[2], 10);
+        let year = parseInt(slashOrDash[3], 10);
+        if (year < 100) year += 2000;
+        const d = new Date(year, month - 1, day);
+        if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+    }
     const d = new Date(s);
-    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
+}
+
+function normalizeBatchDate(value) {
+    return value ? formatDateToISO(value) : '';
 }
 
 function formatCurrency(v) {

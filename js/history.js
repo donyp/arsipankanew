@@ -166,7 +166,7 @@ function generateWATemplate(zonaName, files) {
         const merchant = f.toko_nama || 'Umum';
 
         // PPN Type (Use tipe_ppn if exists, else guess from category/filename)
-        const type = f.tipe_ppn || (f.category === 'NON_PPN' ? 'NON' : 'PPN');
+        const type = getTipePPNLabel(f.tipe_ppn || (f.category === 'NON_PPN' ? 'NON' : 'PPN'));
 
         // Formatted Nominal
         const nominal = new Intl.NumberFormat('id-ID').format(f.total_jual || 0);

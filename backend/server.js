@@ -1022,6 +1022,32 @@ function extractMetadataFromFilename(filename) {
     return meta;
 }
 
+// Always store document dates in the database as YYYY-MM-DD.
+function normalizeDocumentDate(value) {
+    if (!value) return null;
+    const input = String(value).trim();
+    let match = input.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if (match) {
+        const day = Number(match[1]);
+        const month = Number(match[2]);
+        let year = Number(match[3]);
+        if (year < 100) year += 2000;
+        const date = new Date(Date.UTC(year, month - 1, day));
+        if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    match = input.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+        const date = new Date(Date.UTC(year, month - 1, day));
+        if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    return null;
+}
+
 // POST /api/files/upload
 app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload.single('file'), async (req, res) => {
     try {
@@ -1054,9 +1080,10 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
         if (tokoRes.data) tokoKode = tokoRes.data.kode;
 
         // Validate Date (tanggal_dokumen)
+        let normalizedDocumentDate = null;
         if (req.body.tanggal_dokumen) {
-            const parsedDate = Date.parse(req.body.tanggal_dokumen);
-            if (isNaN(parsedDate)) {
+            normalizedDocumentDate = normalizeDocumentDate(req.body.tanggal_dokumen);
+            if (!normalizedDocumentDate) {
                 return res.status(400).json({ error: 'Format tanggal_dokumen tidak valid atau tidak terbaca kalender.' });
             }
         }
@@ -1154,7 +1181,8 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
             finalNominal = filenameMeta.total;
         }
 
-        const finalTipePPN = req.body.tipe_ppn || filenameMeta.tipe_ppn || 'NON';
+        const requestedTipePPN = String(req.body.tipe_ppn || filenameMeta.tipe_ppn || 'NON').trim().toUpperCase();
+        const finalTipePPN = requestedTipePPN === 'NON_PPN' ? 'NON' : requestedTipePPN;
 
         // --- FRAUD DETECTION: Check for Anomaly (Same Toko, Same Nominal, Same Category, within 24h) ---
         let finalStatus = 'Unread';
@@ -1244,7 +1272,7 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 ukuran_bytes: size,
                 uploaded_by: req.user.userId,
                 batch_id: finalBatchId,
-                tanggal_dokumen: req.body.tanggal_dokumen,
+                tanggal_dokumen: normalizedDocumentDate,
                 tipe_ppn: finalTipePPN,
                 no_invoice: req.body.no_invoice,
                 total_jual: finalNominal,

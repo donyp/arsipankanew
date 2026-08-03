@@ -783,7 +783,7 @@ function renderTable() {
             </td>
             <td class="px-2"><span class="px-1.5 py-0.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-500 text-[10px] uppercase tracking-wider">${getCategoryLabel(a.category)}</span></td>
             <td class="px-2">
-                ${a.tipe_ppn ? `<span class="px-1.5 py-0.5 rounded-md text-[9px] tracking-widest ${a.tipe_ppn === 'PPN' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'} uppercase shadow-sm">${a.tipe_ppn}</span>` : '<span class="text-gray-300 text-[10px] font-medium">-</span>'}
+                ${a.tipe_ppn ? `<span class="px-1.5 py-0.5 rounded-md text-[9px] tracking-widest ${normalizeTipePPN(a.tipe_ppn) === 'PPN' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'} uppercase shadow-sm">${getTipePPNLabel(a.tipe_ppn)}</span>` : '<span class="text-gray-300 text-[10px] font-medium">-</span>'}
             </td>
             <td class="px-2 text-gray-900 text-xs whitespace-nowrap font-medium">${a.zonas?.nama || '-'}</td>
             <td class="px-2 text-gray-600 text-xs whitespace-nowrap font-normal">${a.toko?.nama?.replace(/Karawang\s+/i, 'Kwg ') || '-'}</td>
@@ -1656,7 +1656,7 @@ function extractDateFromFilename(name) {
         if (y.length === 2) y = '20' + y;
         const m = dmyMatch[2].padStart(2, '0');
         const d = dmyMatch[1].padStart(2, '0');
-        return `${d}/${m}/${y}`;
+        return `${parseInt(d, 10)} ${['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGT', 'SEP', 'OKT', 'NOV', 'DES'][parseInt(m, 10) - 1]} ${y}`;
     }
 
     // 2. YYYY/MM/DD or YYYY-MM-DD
@@ -1666,7 +1666,7 @@ function extractDateFromFilename(name) {
         const y = ymdMatch[1];
         const m = ymdMatch[2].padStart(2, '0');
         const d = ymdMatch[3].padStart(2, '0');
-        return `${d}/${m}/${y}`;
+        return `${parseInt(d, 10)} ${['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGT', 'SEP', 'OKT', 'NOV', 'DES'][parseInt(m, 10) - 1]} ${y}`;
     }
 
     const months = {
@@ -1686,7 +1686,7 @@ function extractDateFromFilename(name) {
         const month = months[monthAbbr];
         if (month) {
             const year = new Date().getFullYear();
-            return `${day}/${month}/${year}`;
+            return `${parseInt(day, 10)} ${['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGT', 'SEP', 'OKT', 'NOV', 'DES'][parseInt(month, 10) - 1]} ${year}`;
         }
     }
     return null;

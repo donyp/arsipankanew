@@ -174,22 +174,34 @@ function hideLoading() {
 }
 
 // ---- Date Formatting ----
+function normalizeTipePPN(value) {
+    const normalized = String(value || '').trim().toUpperCase();
+    return normalized === 'NON_PPN' ? 'NON' : normalized;
+}
+
+function getTipePPNLabel(value) {
+    const normalized = normalizeTipePPN(value);
+    return normalized === 'NON' ? 'NON PPN' : normalized || '-';
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function formatDateTime(dateStr) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 // ---- Category Label ----
 function getCategoryLabel(value) {
     const cat = CONFIG.CATEGORIES.find(c => c.value === value);
-    return cat ? cat.label : value;
+    return cat ? cat.label : (value === 'NON_PPN' ? 'NON PPN' : value);
 }
 
 function getCategoryColor(value) {

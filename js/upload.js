@@ -154,7 +154,7 @@ function scanFilename(name) {
     // 1. Detect Type (PPN/NON)
     const firstWord = cleanName.split(/\s+/)[0];
     if (/^PPN/i.test(firstWord)) result.tipe = 'PPN';
-    else if (/^NON/i.test(firstWord)) result.tipe = 'NON_PPN';
+    else if (/^NON/i.test(firstWord)) result.tipe = 'NON';
 
     // 2. Detect Toko (Match against window._allTokos)
     if (window._allTokos && window._allTokos.length > 0) {
