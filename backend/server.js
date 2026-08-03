@@ -1234,10 +1234,10 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                         .single();
                     
                     if (fileData && fileData.id) {
-                        // Update file with sync metadata
-                        const updateFields = {
-                            sync_error: syncResult.syncError || null
-                        };
+                        // Keep the upload compatible with existing database schemas.
+                        // `sync_error` is optional in the current files table and may
+                        // not exist in the deployed schema cache.
+                        const updateFields = {};
                         
                         if (syncResult.success) {
                             updateFields.synced = true;
@@ -1246,10 +1246,12 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                             updateFields.synced = false;
                         }
                         
-                        await supabase
-                            .from('files')
-                            .update(updateFields)
-                            .eq('id', fileData.id);
+                        if (Object.keys(updateFields).length > 0) {
+                            await supabase
+                                .from('files')
+                                .update(updateFields)
+                                .eq('id', fileData.id);
+                        }
                         
                         console.log(`[Upload] Database updated for ${req.file.originalname}: synced=${syncResult.success}, attempts=${syncResult.syncAttempts}`);
                     }
@@ -1277,8 +1279,9 @@ app.post('/api/files/upload', authenticateToken, requireUploadPermission, upload
                 no_invoice: req.body.no_invoice,
                 total_jual: finalNominal,
                 status: finalStatus,
-                synced: false,
-                sync_error: null
+                // Do not include optional sync_error here: older databases do not
+                // have that column and would reject the entire upload insert.
+                synced: false
             })
             .select()
             .single();
