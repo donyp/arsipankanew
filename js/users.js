@@ -347,8 +347,6 @@ function setupUserForm() {
             permissions: finalPermissions
         };
 
-        console.log('[DEBUG] Saving User Data:', userData);
-
         if (password) userData.password = password;
 
         try {

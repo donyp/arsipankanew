@@ -119,12 +119,7 @@ async function loginToAlist(domain, credentials, attempt = 1) {
             credentials_source: alistCredentials.source,
             endpoint: domain
         });
-        console.error(`❌ Alist login failed after ${attempt} attempts:`, {
-            domain,
-            username: credentials.username,
-            error: err.message,
-            credentials_source: alistCredentials.source
-        });
+        console.error(`❌ Alist login failed after ${attempt} attempts:`, err.message);
         
         throw new Error(`Alist authentication failed: ${err.message}`);
     }

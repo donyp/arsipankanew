@@ -37,8 +37,7 @@ console.log('[CONFIG] Reading environment variables...');
 console.log(`[CONFIG] PORT: ${process.env.PORT || 'default 4000'}`);
 console.log(`[CONFIG] NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
 console.log(`[CONFIG] SUPABASE_URL: ${process.env.SUPABASE_URL ? 'SET (' + process.env.SUPABASE_URL.substring(0, 20) + '...)' : '❌ NOT SET'}`);
-console.log(`[CONFIG] SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET (' + process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...)' : '❌ NOT SET'}`);
-console.log(`[CONFIG] JWT_SECRET: ${process.env.JWT_SECRET ? 'SET (' + process.env.JWT_SECRET.substring(0, 20) + '...)' : '❌ NOT SET'}`);
+console.log(`[CONFIG] SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : '❌ NOT SET'}`);
 console.log('[CONFIG] Environment configuration loaded.\n');
 
 app.use(cors());
@@ -374,8 +373,8 @@ app.post('/api/auth/login', async (req, res) => {
             .eq('is_active', true)
             .single();
 
-        if (error) console.error("Supabase Error during login:", error);
-        if (!user) console.error("User not found for email:", email);
+        if (error) console.error("Supabase Error during login:", error.message || error);
+        if (!user) console.error("User not found during login");
 
         if (error || !user) {
             return res.status(401).json({ error: 'Email atau password salah.' });
@@ -712,8 +711,8 @@ app.get('/api/toko', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/files/:id/download â€” download file
-app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
+// Stream an archive file directly from the configured storage remote.
+async function streamFileDownload(req, res) {
     try {
         const { data: file, error } = await supabase
             .from('files')
@@ -763,12 +762,17 @@ app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
         console.error('Download File Error:', err);
         res.status(500).json({ error: 'Gagal download file.' });
     }
-});
+}
+
+// GET /api/files/:id/download — download file
+app.get('/api/files/:id/download', authenticateToken, streamFileDownload);
 
 // Alias for sequential download (1-3 files) used by frontend
-app.get('/api/files/download/:id', authenticateToken, (req, res) => {
-    // Redirect or just call the same logic
-    res.redirect(`/api/files/${req.params.id}/download?token=${req.query.token}`);
+app.get('/api/files/download/:id', authenticateToken, (req, res, next) => {
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) {
+        return res.status(400).json({ error: 'ID file tidak valid.' });
+    }
+    return streamFileDownload(req, res, next);
 });
 
 // GET /api/files/:id/view — inline preview (PDF in iframe)
