@@ -26,6 +26,7 @@ initializeSecretManager();
 
 const app = express();
 const port = process.env.PORT || 4000;
+const BACKUP_DIR = path.join(__dirname, '..', 'data', 'backups');
 
 console.log('================================================');
 console.log(`[BOOT] Pusat Arsip Anka - v2.1.0-fixed`);
@@ -1400,23 +1401,24 @@ app.post('/api/files/bulk-restore', authenticateToken, authorizeRole('super_admi
 
         let query = supabase
             .from('files')
-            .update({ deleted_at: null })
+            .update({ deleted_at: null, deleted_by: null })
             .in('id', ids);
 
         if (req.user.role === 'admin_zona') {
             query = query.eq('zona_id', req.user.zona_id);
         }
 
-        const { error } = await query;
+        const { data: restored, error } = await query.select('id');
+        if (error) throw error;
 
         // Audit
         await supabase.from('audit_logs').insert({
             user_id: req.user.userId,
             action: 'Bulk Restore',
-            context: `Restored ${ids.length} files from trash`
+            context: `Restored ${restored?.length || 0} files from trash`
         });
 
-        res.json({ success: true, message: `${ids.length} file berhasil dipulihkan.` });
+        res.json({ success: true, message: `${restored?.length || 0} file berhasil dipulihkan.` });
     } catch (err) {
         console.error('Bulk Restore Error:', err);
         res.status(500).json({ error: 'Gagal memulihkan file massal.' });
@@ -1483,6 +1485,14 @@ app.post('/api/files/bulk-trash-delete', authenticateToken, requirePermission('h
 app.put('/api/files/:id/restore', authenticateToken, authorizeRole('super_admin', 'moderator'), async (req, res) => {
     try {
 
+        const { data: file, error: fetchError } = await supabase
+            .from('files')
+            .select('id, nama_file, deleted_at')
+            .eq('id', req.params.id)
+            .maybeSingle();
+        if (fetchError) throw fetchError;
+        if (!file || !file.deleted_at) return res.status(404).json({ error: 'File tidak ditemukan di tong sampah.' });
+
         const { error } = await supabase
             .from('files')
             .update({
@@ -1496,7 +1506,7 @@ app.put('/api/files/:id/restore', authenticateToken, authorizeRole('super_admin'
         await supabase.from('audit_logs').insert({
             user_id: req.user.userId,
             action: 'Restore File',
-            context: `Restored file ${req.params.id}`
+            context: `Restored file ${file.nama_file} (${req.params.id})`
         });
 
         res.json({ success: true, message: 'File berhasil dipulihkan.' });
@@ -1990,6 +2000,168 @@ app.post('/api/system/sync-terabox', authenticateToken, authorizeRole('super_adm
     } catch (err) {
         console.error('[Sync Error]', err);
         res.status(500).json({ error: 'Sync failed: ' + err.message });
+    }
+});
+
+// ============================================================
+// STORAGE SYNC, SYSTEM HEALTH, AND METADATA BACKUP
+// ============================================================
+
+function isPrivilegedStorageUser(req) {
+    return req.user?.role === 'super_admin' || req.user?.role === 'moderator';
+}
+
+// Dashboard status is readable by all authenticated users, but paths are
+// checked against the user's visible files so zone admins cannot probe paths.
+app.get('/api/sync/statuses', authenticateToken, async (req, res) => {
+    try {
+        const requestedPaths = String(req.query.paths || '')
+            .split(',')
+            .map(value => decodeURIComponent(value).trim())
+            .filter(Boolean)
+            .slice(0, 100);
+
+        if (requestedPaths.length === 0) return res.json({ statuses: {} });
+
+        let query = supabase
+            .from('files')
+            .select('storage_path')
+            .in('storage_path', requestedPaths)
+            .is('deleted_at', null);
+        if (req.user.role === 'admin_zona') query = query.eq('zona_id', req.user.zona_id);
+
+        const { data: visibleFiles, error } = await query;
+        if (error) throw error;
+        const visiblePaths = (visibleFiles || []).map(file => file.storage_path);
+        const storedStatuses = RcloneStorage.getSyncStatuses(visiblePaths);
+        const statuses = Object.fromEntries(visiblePaths.map(storagePath => [
+            storagePath,
+            storedStatuses[storagePath] || {
+                storagePath,
+                primaryStatus: 'unknown',
+                backupStatus: 'unknown',
+                lastError: null,
+                updatedAt: null
+            }
+        ]));
+        res.json({ statuses });
+    } catch (err) {
+        console.error('[Sync Status API] Error:', err.message);
+        res.status(500).json({ error: 'Gagal membaca status sinkronisasi.' });
+    }
+});
+
+app.get('/api/sync/queue', authenticateToken, authorizeRole('super_admin', 'moderator'), (req, res) => {
+    res.json(RcloneStorage.getSyncQueueSnapshot());
+});
+
+app.post('/api/sync/retry', authenticateToken, authorizeRole('super_admin', 'moderator'), async (req, res) => {
+    try {
+        const paths = Array.isArray(req.body?.storagePaths) ? req.body.storagePaths : [];
+        const changed = RcloneStorage.retrySyncJobs(paths);
+        RcloneStorage.processPendingSyncJobs().catch(err => console.warn('[Sync Retry] Worker failed:', err.message));
+        res.json({ success: true, queued: changed });
+    } catch (err) {
+        console.error('[Sync Retry API] Error:', err.message);
+        res.status(500).json({ error: 'Gagal menjadwalkan ulang sinkronisasi.' });
+    }
+});
+
+app.post('/api/sync/verify', authenticateToken, authorizeRole('super_admin', 'moderator'), async (req, res) => {
+    try {
+        const paths = Array.isArray(req.body?.storagePaths) ? req.body.storagePaths : [];
+        if (!paths.length) return res.status(400).json({ error: 'Tidak ada file yang diverifikasi.' });
+        const statuses = await RcloneStorage.verifySyncPaths(paths);
+        res.json({ success: true, statuses });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal memverifikasi status sinkronisasi.' });
+    }
+});
+
+app.get('/api/system/health', authenticateToken, authorizeRole('super_admin', 'moderator'), async (req, res) => {
+    const queue = RcloneStorage.getSyncQueueSnapshot();
+    const services = {
+        backend: { healthy: true, detail: 'Backend merespons.' },
+        localStorage: { healthy: fs.existsSync(process.env.STORAGE_PATH || path.join(__dirname, '..', 'data', 'files')), detail: 'LocalStorage' },
+        syncQueue: { healthy: queue.summary.failed === 0, detail: `${queue.summary.total} pekerjaan tertunda.` },
+        database: { healthy: false, detail: 'Belum diperiksa.' },
+        alist: { healthy: false, detail: 'Belum diperiksa.' }
+    };
+    try {
+        const { error } = await supabase.from('files').select('id').limit(1);
+        services.database = { healthy: !error, detail: error ? error.message : 'Koneksi database aktif.' };
+    } catch (err) {
+        services.database = { healthy: false, detail: err.message };
+    }
+    try {
+        const status = await verifyRcloneConnectivity();
+        services.alist = { healthy: Boolean(status.verified), detail: status.message || status.errorDetails || 'Alist/Terabox' };
+    } catch (err) {
+        services.alist = { healthy: false, detail: err.message };
+    }
+    const healthy = Object.values(services).every(service => service.healthy);
+    // Keep the diagnostic payload readable by the UI even when one service is
+    // degraded; the page itself presents the overall unhealthy state.
+    res.status(200).json({ healthy, checkedAt: new Date().toISOString(), services, queue: queue.summary });
+});
+
+app.get('/api/system/backups', authenticateToken, authorizeRole('super_admin', 'moderator'), (req, res) => {
+    try {
+        if (!fs.existsSync(BACKUP_DIR)) return res.json({ backups: [] });
+        const backups = fs.readdirSync(BACKUP_DIR)
+            .filter(name => name.endsWith('.json'))
+            .map(name => {
+                const fullPath = path.join(BACKUP_DIR, name);
+                const stat = fs.statSync(fullPath);
+                return { name, size: stat.size, createdAt: stat.mtime.toISOString() };
+            })
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .slice(0, 20);
+        res.json({ backups });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal membaca riwayat backup.' });
+    }
+});
+
+app.post('/api/system/backups', authenticateToken, authorizeRole('super_admin', 'moderator'), async (req, res) => {
+    try {
+        fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        const snapshot = { createdAt: new Date().toISOString(), version: 1, tables: {} };
+        for (const [table, select] of [
+            ['files', 'id, nama_file, storage_path, ukuran_bytes, category, tipe_ppn, tanggal_dokumen, zona_id, toko_id, status, created_at, deleted_at, deleted_by'],
+            ['zonas', '*'],
+            ['toko', '*']
+        ]) {
+            const rows = [];
+            for (let from = 0; ; from += 1000) {
+                const { data, error } = await supabase.from(table).select(select).range(from, from + 999);
+                if (error) throw error;
+                rows.push(...(data || []));
+                if (!data || data.length < 1000) break;
+            }
+            snapshot.tables[table] = rows;
+        }
+        const stamp = snapshot.createdAt.replace(/[-:TZ.]/g, '').slice(0, 14);
+        const fileName = `metadata-backup-${stamp}.json`;
+        const fullPath = path.join(BACKUP_DIR, fileName);
+        fs.writeFileSync(fullPath, JSON.stringify(snapshot, null, 2));
+
+        let remoteBackup = { healthy: false, detail: 'Storage cadangan belum berhasil diisi.' };
+        try {
+            await RcloneStorage.backupLocalPath(fullPath, `database-backups/${fileName}`);
+            remoteBackup = { healthy: true, detail: 'Backup metadata tersalin ke storage cadangan.' };
+        } catch (remoteError) {
+            remoteBackup.detail = remoteError.message;
+        }
+        await supabase.from('audit_logs').insert({
+            user_id: req.user.userId,
+            action: 'Create Metadata Backup',
+            context: `${fileName}; remote=${remoteBackup.healthy ? 'verified' : 'failed'}`
+        });
+        res.json({ success: true, backup: { name: fileName, size: fs.statSync(fullPath).size, createdAt: snapshot.createdAt, remote: remoteBackup } });
+    } catch (err) {
+        console.error('[Metadata Backup API] Error:', err.message);
+        res.status(500).json({ error: 'Gagal membuat backup metadata: ' + err.message });
     }
 });
 

@@ -15,12 +15,19 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const LocalStorage = {
     /**
+     * Resolve a workspace-relative storage path without exposing it to users.
+     */
+    getPath(storagePath) {
+        return path.join(DATA_DIR, storagePath);
+    },
+
+    /**
      * Upload file to local storage
      */
     async uploadDirect(fileBuffer, originalName, storagePath) {
         try {
             // Ensure parent directories exist
-            const fullPath = path.join(DATA_DIR, storagePath);
+            const fullPath = this.getPath(storagePath);
             const dir = path.dirname(fullPath);
             
             if (!fs.existsSync(dir)) {
@@ -43,7 +50,7 @@ const LocalStorage = {
      */
     async downloadBuffer(storagePath) {
         try {
-            const fullPath = path.join(DATA_DIR, storagePath);
+            const fullPath = this.getPath(storagePath);
             
             if (!fs.existsSync(fullPath)) {
                 throw new Error(`File not found: ${storagePath}`);
@@ -62,7 +69,7 @@ const LocalStorage = {
      * Create a readable stream from local storage.
      */
     createReadStream(storagePath) {
-        const fullPath = path.join(DATA_DIR, storagePath);
+        const fullPath = this.getPath(storagePath);
         if (!fs.existsSync(fullPath)) {
             throw new Error(`File not found: ${storagePath}`);
         }
@@ -74,7 +81,7 @@ const LocalStorage = {
      */
     async deleteFile(storagePath) {
         try {
-            const fullPath = path.join(DATA_DIR, storagePath);
+            const fullPath = this.getPath(storagePath);
             
             if (fs.existsSync(fullPath)) {
                 fs.unlinkSync(fullPath);
@@ -91,7 +98,7 @@ const LocalStorage = {
      * Check if file exists
      */
     fileExists(storagePath) {
-        const fullPath = path.join(DATA_DIR, storagePath);
+        const fullPath = this.getPath(storagePath);
         return fs.existsSync(fullPath);
     },
 
@@ -100,7 +107,7 @@ const LocalStorage = {
      */
     getFileSize(storagePath) {
         try {
-            const fullPath = path.join(DATA_DIR, storagePath);
+            const fullPath = this.getPath(storagePath);
             const stats = fs.statSync(fullPath);
             return stats.size;
         } catch (err) {

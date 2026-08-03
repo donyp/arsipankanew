@@ -163,9 +163,12 @@ function updateUserUI() {
         el.textContent = currentUser.zonas ? currentUser.zonas.nama : 'Semua Zona';
     });
 
-    // Show/hide super admin elements
-    document.querySelectorAll('[data-role="super_admin"]').forEach(el => {
-        const isAllowed = isSuperAdmin();
+    // Show/hide role-scoped elements. A guard may contain a comma-separated
+    // list, e.g. data-role="super_admin,moderator".
+    document.querySelectorAll('[data-role]').forEach(el => {
+        const allowedRoles = el.getAttribute('data-role').split(',').map(role => role.trim());
+        const isAllowed = allowedRoles.includes(currentUser.role)
+            || (allowedRoles.includes('super_admin') && currentUser.role === 'moderator');
         if (!isAllowed) {
             if (el.tagName === 'OPTION') el.remove();
             else el.style.display = 'none';

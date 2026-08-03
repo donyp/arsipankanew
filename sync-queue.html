@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antrean Sinkronisasi | Pusat Arsip Anka</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script>document.documentElement.style.opacity='0';document.documentElement.classList.add('auth-loading');</script>
+</head>
+<body class="bg-[#F0F2F5] min-h-screen text-gray-800">
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <aside id="sidebar" class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 hidden"></aside>
+    <main id="main-content" class="min-h-screen transition-all duration-300">
+        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-5 flex items-center justify-between">
+            <div><h1 class="text-xl font-black text-gray-900">Antrean Sinkronisasi</h1><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Primary Terabox dan storage cadangan</p></div>
+            <button onclick="retryAll()" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">Retry Semua</button>
+        </header>
+        <section class="p-6 space-y-6 max-w-7xl mx-auto">
+            <div id="queue-summary" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+            <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex items-center justify-between"><div><h2 class="font-black text-gray-900">Pekerjaan Tertunda</h2><p class="text-xs text-gray-400 mt-1">Retry manual hanya memproses pekerjaan yang dipilih.</p></div><button onclick="loadQueue()" class="text-[10px] font-black uppercase tracking-widest text-blue-600">Refresh</button></div>
+                <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-gray-50 text-[10px] uppercase tracking-widest text-gray-400"><tr><th class="p-4">File</th><th class="p-4">Primary</th><th class="p-4">Cadangan</th><th class="p-4">Percobaan</th><th class="p-4">Retry</th></tr></thead><tbody id="queue-body" class="text-xs"></tbody></table></div>
+                <div id="queue-empty" class="hidden p-16 text-center text-sm font-bold text-emerald-600">Antrean sinkronisasi kosong.</div>
+            </div>
+        </section>
+    </main>
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script><script src="js/config.js"></script><script src="js/supabase.js"></script><script src="js/utils.js"></script><script src="js/auth.js"></script>
+    <script>
+        function toggleSidebar(){document.getElementById('sidebar')?.classList.toggle('open');document.getElementById('mobile-overlay')?.classList.toggle('active');}
+        const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const pill = value => { const ok=value==='verified'; const failed=value==='failed'; return `<span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase ${ok?'bg-emerald-50 text-emerald-600':failed?'bg-red-50 text-red-600':'bg-amber-50 text-amber-600'}">${ok?'Terverifikasi':failed?'Gagal':'Tertunda'}</span>`; };
+        async function loadQueue(){try{const data=await API.get('/api/sync/queue');const s=data.summary||{};document.getElementById('queue-summary').innerHTML=[['Total',s.total],['Primary pending',s.pending],['Primary OK',s.primaryVerified],['Cadangan pending',s.backupPending],['Gagal',s.failed]].map(([label,value])=>`<div class="bg-white rounded-2xl border border-gray-100 p-4"><p class="text-[9px] font-black uppercase tracking-widest text-gray-400">${label}</p><p class="text-2xl font-black text-gray-900 mt-2">${value||0}</p></div>`).join('');const jobs=data.jobs||[];document.getElementById('queue-empty').classList.toggle('hidden',jobs.length>0);document.getElementById('queue-body').innerHTML=jobs.map(job=>`<tr class="border-b border-gray-50 hover:bg-gray-50"><td class="p-4"><p class="font-bold text-gray-900">${esc(job.originalName)}</p><p class="text-[10px] text-gray-400 font-mono mt-1">${esc(job.storagePath)}</p></td><td class="p-4">${pill(job.primaryStatus)}</td><td class="p-4">${pill(job.backupStatus)}</td><td class="p-4 text-gray-500">${job.attempts||0}</td><td class="p-4"><button onclick="retryOne('${encodeURIComponent(job.storagePath)}')" class="text-[10px] font-black uppercase text-blue-600">Retry</button></td></tr>`).join('');}catch(err){Toast.error(err.message);}}
+        async function retryOne(encoded){await API.post('/api/sync/retry',{storagePaths:[decodeURIComponent(encoded)]});Toast.success('Pekerjaan dijadwalkan ulang.');loadQueue();}
+        async function retryAll(){await API.post('/api/sync/retry',{storagePaths:[]});Toast.success('Semua pekerjaan dijadwalkan ulang.');loadQueue();}
+        document.addEventListener('DOMContentLoaded',async()=>{if(await initAuth(['super_admin','moderator']))loadQueue();});
+    </script>
+</body>
+</html>

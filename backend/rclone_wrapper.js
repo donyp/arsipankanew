@@ -34,6 +34,7 @@ const errorLogger = new StorageErrorLogger({
 
 const createdDirsCache = new Set();
 const syncQueuePath = process.env.SYNC_QUEUE_PATH || path.resolve(__dirname, '..', 'data', 'storage-sync-queue.json');
+const syncStatusPath = process.env.SYNC_STATUS_PATH || path.resolve(__dirname, '..', 'data', 'storage-sync-status.json');
 let syncQueueWorkerStarted = false;
 let syncQueueWorkerRunning = false;
 
@@ -56,6 +57,44 @@ function writeSyncQueue(queue) {
     fs.renameSync(tempPath, syncQueuePath);
 }
 
+function readSyncStatus() {
+    try {
+        if (!fs.existsSync(syncStatusPath)) return {};
+        const parsed = JSON.parse(fs.readFileSync(syncStatusPath, 'utf8'));
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (err) {
+        console.error('[Sync Status] Failed to read status:', err.message);
+        return {};
+    }
+}
+
+function writeSyncStatus(statuses) {
+    const parent = path.dirname(syncStatusPath);
+    fs.mkdirSync(parent, { recursive: true });
+    const tempPath = `${syncStatusPath}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(statuses, null, 2));
+    fs.renameSync(tempPath, syncStatusPath);
+}
+
+function updateSyncStatus(storagePath, updates) {
+    const statuses = readSyncStatus();
+    statuses[storagePath] = {
+        ...(statuses[storagePath] || {}),
+        ...updates,
+        storagePath,
+        updatedAt: new Date().toISOString()
+    };
+    writeSyncStatus(statuses);
+    return statuses[storagePath];
+}
+
+function getSyncStatuses(storagePaths = null) {
+    const statuses = readSyncStatus();
+    if (!Array.isArray(storagePaths)) return statuses;
+    const allowed = new Set(storagePaths);
+    return Object.fromEntries(Object.entries(statuses).filter(([storagePath]) => allowed.has(storagePath)));
+}
+
 function queueKey(storagePath) {
     return storagePath;
 }
@@ -66,12 +105,17 @@ function enqueueSyncJob({ storagePath, originalName, size }) {
     if (existing) {
         existing.originalName = originalName;
         existing.size = size;
+        existing.primaryStatus = existing.primaryStatus || 'pending';
+        existing.backupStatus = existing.backupStatus || 'pending';
         existing.updatedAt = new Date().toISOString();
     } else {
         queue.push({
             storagePath,
             originalName,
             size,
+            primaryStatus: 'pending',
+            backupStatus: 'pending',
+            backupError: null,
             attempts: 0,
             nextAttemptAt: new Date().toISOString(),
             lastError: null,
@@ -80,6 +124,16 @@ function enqueueSyncJob({ storagePath, originalName, size }) {
         });
     }
     writeSyncQueue(queue);
+    updateSyncStatus(storagePath, {
+        originalName,
+        size,
+        primaryStatus: 'pending',
+        backupStatus: 'pending',
+        lastError: null,
+        backupError: null,
+        attempts: existing?.attempts || 0,
+        nextAttemptAt: existing?.nextAttemptAt || new Date().toISOString()
+    });
     return queue;
 }
 
@@ -101,6 +155,24 @@ function retryDelayForSyncJob(attempts, error) {
         return 30 * 60 * 1000;
     }
     return Math.min(60 * 60 * 1000, Math.max(60 * 1000, 2 ** Math.min(attempts, 6) * 1000));
+}
+
+function updateSyncJob(storagePath, updates) {
+    const queue = readSyncQueue();
+    const job = queue.find(item => queueKey(item.storagePath) === queueKey(storagePath));
+    if (!job) return null;
+    Object.assign(job, updates, { updatedAt: new Date().toISOString() });
+    writeSyncQueue(queue);
+    updateSyncStatus(storagePath, updates);
+    return job;
+}
+
+async function backupLocalFile(storagePath) {
+    if (!LocalStorage.fileExists(storagePath)) {
+        throw new Error('Salinan lokal tidak ditemukan untuk backup.');
+    }
+    await rcloneExec(['copyto', LocalStorage.getPath(storagePath), `${BACKUP_REMOTE}:${storagePath}`]);
+    return true;
 }
 
 async function remoteFileExists(storagePath) {
@@ -128,28 +200,53 @@ async function processSyncQueue() {
             try {
                 if (await remoteFileExists(job.storagePath)) {
                     console.log(`[Sync Queue] Remote file already exists: ${job.storagePath}`);
-                    removeSyncJob(job.storagePath);
-                    continue;
+                    updateSyncJob(job.storagePath, { primaryStatus: 'verified', lastError: null });
+                } else if (job.primaryStatus !== 'verified') {
+                    const buffer = await LocalStorage.downloadBuffer(job.storagePath);
+                    await RcloneStorage.uploadDirect(buffer, job.originalName, job.storagePath);
+
+                    if (!(await remoteFileExists(job.storagePath))) {
+                        throw new Error('Upload returned success but remote verification failed');
+                    }
+                    updateSyncJob(job.storagePath, { primaryStatus: 'verified', lastError: null });
                 }
 
-                const buffer = await LocalStorage.downloadBuffer(job.storagePath);
-                await RcloneStorage.uploadDirect(buffer, job.originalName, job.storagePath);
-
-                if (!(await remoteFileExists(job.storagePath))) {
-                    throw new Error('Upload returned success but remote verification failed');
+                if (job.backupStatus !== 'verified') {
+                    try {
+                        await backupLocalFile(job.storagePath);
+                        updateSyncJob(job.storagePath, {
+                            primaryStatus: 'verified',
+                            backupStatus: 'verified',
+                            backupError: null,
+                            lastError: null
+                        });
+                    } catch (backupError) {
+                        updateSyncJob(job.storagePath, {
+                            primaryStatus: 'verified',
+                            backupStatus: 'failed',
+                            backupError: backupError.message,
+                            lastError: backupError.message,
+                            attempts: Number(job.attempts || 0) + 1,
+                            nextAttemptAt: new Date(Date.now() + retryDelayForSyncJob(job.attempts + 1, backupError)).toISOString()
+                        });
+                        console.warn(`[Sync Queue] Backup deferred ${job.originalName}: ${backupError.message}`);
+                        continue;
+                    }
                 }
 
-                console.log(`[Sync Queue] ✅ Remote upload verified: ${job.storagePath}`);
+                console.log(`[Sync Queue] ✅ Primary and backup verified: ${job.storagePath}`);
                 removeSyncJob(job.storagePath);
             } catch (err) {
                 const currentQueue = readSyncQueue();
                 const current = currentQueue.find(item => queueKey(item.storagePath) === queueKey(job.storagePath));
                 if (!current) continue;
                 current.attempts = Number(current.attempts || 0) + 1;
+                current.primaryStatus = current.primaryStatus === 'verified' ? 'verified' : 'failed';
                 current.lastError = err.message;
                 current.nextAttemptAt = new Date(Date.now() + retryDelayForSyncJob(current.attempts, err)).toISOString();
                 current.updatedAt = new Date().toISOString();
                 writeSyncQueue(currentQueue);
+                updateSyncStatus(job.storagePath, current);
                 console.warn(`[Sync Queue] Deferred ${job.originalName}: ${err.message}`);
             }
         }
@@ -390,7 +487,12 @@ const RcloneStorage = {
             // Success after retry(ies)
             const successMsg = `[Background Upload] SUCCESS for ${originalName} after ${result.attempts} attempts`;
             console.log(successMsg);
-            removeSyncJob(storagePath);
+            updateSyncJob(storagePath, {
+                primaryStatus: 'verified',
+                lastError: null,
+                nextAttemptAt: new Date().toISOString()
+            });
+            processSyncQueue().catch(err => console.warn('[Sync Queue] Post-upload backup failed:', err.message));
             
             // Log successful completion
             errorLogger.logOperation('background_upload_success', {
@@ -423,6 +525,13 @@ const RcloneStorage = {
                 totalDelayMs: result.totalDelay,
                 totalDelay: `${(result.totalDelay / 1000).toFixed(1)}s`,
                 context: 'All retry attempts exhausted'
+            });
+            updateSyncStatus(storagePath, {
+                primaryStatus: 'failed',
+                backupStatus: 'pending',
+                attempts: result.attempts,
+                lastError: result.lastError?.message || 'Unknown error',
+                nextAttemptAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
             });
             
             return {
@@ -863,6 +972,78 @@ const RcloneStorage = {
      */
     getPendingSyncJobs() {
         return readSyncQueue();
+    },
+
+    getSyncQueueSnapshot() {
+        const jobs = readSyncQueue();
+        return {
+            jobs,
+            summary: {
+                total: jobs.length,
+                pending: jobs.filter(job => job.primaryStatus !== 'verified').length,
+                primaryVerified: jobs.filter(job => job.primaryStatus === 'verified').length,
+                backupPending: jobs.filter(job => job.backupStatus !== 'verified').length,
+                backupVerified: jobs.filter(job => job.backupStatus === 'verified').length,
+                failed: jobs.filter(job => job.lastError || job.backupStatus === 'failed').length
+            }
+        };
+    },
+
+    getSyncStatuses(storagePaths = null) {
+        return getSyncStatuses(storagePaths);
+    },
+
+    async verifySyncPaths(storagePaths = []) {
+        const result = {};
+        for (const storagePath of storagePaths) {
+            const stored = getSyncStatuses([storagePath])[storagePath] || {
+                storagePath,
+                primaryStatus: 'pending',
+                backupStatus: 'pending'
+            };
+            try {
+                const primaryExists = await remoteFileExists(storagePath);
+                result[storagePath] = {
+                    ...stored,
+                    primaryStatus: primaryExists ? 'verified' : 'failed',
+                    lastError: primaryExists ? null : 'File primary tidak ditemukan di remote.'
+                };
+                updateSyncStatus(storagePath, result[storagePath]);
+            } catch (err) {
+                result[storagePath] = { ...stored, primaryStatus: 'failed', lastError: err.message };
+                updateSyncStatus(storagePath, result[storagePath]);
+            }
+        }
+        return result;
+    },
+
+    retrySyncJobs(storagePaths = []) {
+        const requested = new Set(Array.isArray(storagePaths) ? storagePaths : []);
+        const queue = readSyncQueue();
+        let changed = 0;
+        queue.forEach(job => {
+            if (requested.size === 0 || requested.has(job.storagePath)) {
+                job.nextAttemptAt = new Date().toISOString();
+                job.lastError = null;
+                if (job.primaryStatus === 'failed') job.primaryStatus = 'pending';
+                if (job.backupStatus === 'failed') job.backupStatus = 'pending';
+                changed++;
+            }
+        });
+        if (changed) writeSyncQueue(queue);
+        return changed;
+    },
+
+    backupFile(storagePath) {
+        return backupLocalFile(storagePath);
+    },
+
+    async backupLocalPath(localPath, remotePath) {
+        if (!fs.existsSync(localPath)) {
+            throw new Error('Berkas backup lokal tidak ditemukan.');
+        }
+        await rcloneExec(['copyto', localPath, `${BACKUP_REMOTE}:${remotePath}`]);
+        return true;
     },
 
     /**

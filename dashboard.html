@@ -282,6 +282,15 @@
                         <h3 id="stat-storage-today" class="text-3xl font-black text-gray-900">0 KB</h3>
                     </div>
                 </div>
+                <div id="sync-status-summary" class="hidden bg-white px-6 py-4 rounded-3xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-gray-500">Sinkronisasi</span>
+                    </div>
+                    <span id="sync-primary-summary" class="text-xs font-bold text-gray-700">Primary: memuat...</span>
+                    <span id="sync-backup-summary" class="text-xs font-bold text-gray-700">Cadangan: memuat...</span>
+                    <a href="sync-queue.html" data-role="super_admin,moderator" class="ml-auto text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-800">Buka antrean</a>
+                </div>
 
                 <!-- Analytics Chart -->
                 <div id="admin-controls" class="hidden">

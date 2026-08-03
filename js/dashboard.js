@@ -12,6 +12,7 @@ let viewMode = 'active'; // 'active' or 'deleted'
 let isAnomalyFilterActive = false;
 let hasMoreData = true;
 let isFetching = false;
+let syncStatuses = {};
 
 // Zona cache for labels
 window._zonaCache = [];
@@ -472,6 +473,7 @@ async function loadArchives(append = false) {
         hasMoreData = currentPage < totalPages;
 
         filteredArchives = archives;
+        await loadSyncStatuses();
         renderTable();
         updateStats(res);
         if (!append) await populateTokoFilter();
@@ -481,6 +483,25 @@ async function loadArchives(append = false) {
         isFetching = false;
         hideLoading();
         document.getElementById('scroll-loader')?.classList.add('hidden');
+    }
+}
+
+async function loadSyncStatuses() {
+    const paths = archives.map(file => file.storage_path).filter(Boolean);
+    if (!paths.length) return;
+    try {
+        const query = paths.map(path => encodeURIComponent(path)).join(',');
+        const response = await API.get(`/api/sync/statuses?paths=${query}`);
+        syncStatuses = { ...syncStatuses, ...(response.statuses || {}) };
+        const summary = document.getElementById('sync-status-summary');
+        if (summary && typeof currentUser !== 'undefined' && currentUser) summary.classList.remove('hidden');
+        const visible = paths.map(path => syncStatuses[path]).filter(Boolean);
+        const primary = visible.filter(status => status.primaryStatus === 'verified').length;
+        const backup = visible.filter(status => status.backupStatus === 'verified').length;
+        document.getElementById('sync-primary-summary')?.replaceChildren(document.createTextNode(`Primary: ${primary}/${paths.length} terverifikasi`));
+        document.getElementById('sync-backup-summary')?.replaceChildren(document.createTextNode(`Cadangan: ${backup}/${paths.length} terverifikasi`));
+    } catch (err) {
+        console.warn('Gagal membaca status sinkronisasi:', err.message);
     }
 }
 
@@ -834,7 +855,10 @@ function renderTable() {
                     </div>
                 </div>
             </td>
-            <td class="px-2"><span class="px-1.5 py-0.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-500 text-[10px] uppercase tracking-wider">${getCategoryLabel(a.category)}</span></td>
+            <td class="px-2">
+                <span class="px-1.5 py-0.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-500 text-[10px] uppercase tracking-wider">${getCategoryLabel(a.category)}</span>
+                ${syncStatusBadge(a.storage_path)}
+            </td>
             <td class="px-2">
                 ${a.tipe_ppn ? `<span class="px-1.5 py-0.5 rounded-md text-[9px] tracking-widest ${normalizeTipePPN(a.tipe_ppn) === 'PPN' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'} uppercase shadow-sm">${getTipePPNLabel(a.tipe_ppn)}</span>` : '<span class="text-gray-300 text-[10px] font-medium">-</span>'}
             </td>
@@ -895,6 +919,17 @@ function renderTable() {
     }).join('');
 
     updateBulkUI();
+}
+
+function syncStatusBadge(storagePath) {
+    const status = syncStatuses[storagePath];
+    if (!status) return '';
+    const primaryOk = status.primaryStatus === 'verified';
+    const backupOk = status.backupStatus === 'verified';
+    const unknown = status.primaryStatus === 'unknown';
+    const color = primaryOk && backupOk ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : (status.lastError ? 'text-red-600 bg-red-50 border-red-100' : 'text-amber-600 bg-amber-50 border-amber-100');
+    const label = primaryOk && backupOk ? 'SYNC OK' : (status.lastError ? 'SYNC GAGAL' : (unknown ? 'BELUM DIVERIFIKASI' : 'SYNC TERTUNDA'));
+    return `<span title="Primary: ${primaryOk ? 'terverifikasi' : 'belum'} | Cadangan: ${backupOk ? 'terverifikasi' : 'belum'}${status.lastError ? ` | ${status.lastError}` : ''}" class="inline-block mt-1 px-1.5 py-0.5 rounded-md border ${color} text-[8px] font-black uppercase tracking-wider">${label}</span>`;
 }
 
 // ---- Pagination ----
