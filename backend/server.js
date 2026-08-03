@@ -2123,6 +2123,25 @@ app.get('/api/system/backups', authenticateToken, authorizeRole('super_admin', '
     }
 });
 
+app.get('/api/system/backups/:name/download', authenticateToken, authorizeRole('super_admin', 'moderator'), (req, res) => {
+    try {
+        const requestedName = path.basename(req.params.name || '');
+        if (!/^metadata-backup-\d{14}\.json$/.test(requestedName)) {
+            return res.status(400).json({ error: 'Nama file backup tidak valid.' });
+        }
+
+        const fullPath = path.join(BACKUP_DIR, requestedName);
+        if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+            return res.status(404).json({ error: 'File backup tidak ditemukan.' });
+        }
+
+        return res.download(fullPath, requestedName, { headers: { 'Content-Type': 'application/json' } });
+    } catch (err) {
+        console.error('[Metadata Backup Download] Error:', err.message);
+        return res.status(500).json({ error: 'Gagal mendownload file backup.' });
+    }
+});
+
 app.post('/api/system/backups', authenticateToken, authorizeRole('super_admin', 'moderator'), async (req, res) => {
     try {
         fs.mkdirSync(BACKUP_DIR, { recursive: true });
