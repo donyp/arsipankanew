@@ -1,13 +1,52 @@
 {
-    "updatedAt": "2026-08-03T07:42:04.962Z",
+    "updatedAt": "2026-08-03T08:14:11.806Z",
     "updatedBy": "Doni",
     "lastResult": {
-        "id": "maint_1781936387624",
-        "title": "Perbaikan Bug",
+        "id": "maint_1785744851806",
+        "title": "Update Website",
         "details": [
-            "tes"
+            {
+                "summary": "Perbaikan Upload File",
+                "description": "Multer diperbarui ke versi 2.2.0."
+            },
+            {
+                "summary": "Detail Notifikasi",
+                "description": "Detail dapat dibuka secara inline atau melalui mode fokus."
+            },
+            {
+                "summary": "Status Read Arsip",
+                "description": "Arsip otomatis berubah dari Unread menjadi Read setelah preview dibuka."
+            },
+            {
+                "summary": "Sinkronisasi Terabox",
+                "description": "Sinkronisasi menggunakan listing rekursif dan pagination."
+            },
+            {
+                "summary": "Pemetaan Data Arsip",
+                "description": "Metadata file dan toko berhasil dipetakan ke struktur zona baru."
+            },
+            {
+                "summary": "Penyesuaian Akun Zona",
+                "description": "Akun zona diarahkan ke zona baru dan akun zona6 lama dinonaktifkan."
+            },
+            {
+                "summary": "Form Edit User",
+                "description": "Hak Akses Tambahan dihapus dan permission lama tetap dipertahankan."
+            },
+            {
+                "summary": "Batch Upload Invoice",
+                "description": "Tanggal dari Excel dan batch upload diproses secara konsisten."
+            },
+            {
+                "summary": "Format Tanggal Dokumen",
+                "description": "Tanggal otomatis dinormalisasi ke format YYYY-MM-DD."
+            },
+            {
+                "summary": "Form Upload Invoice",
+                "description": "Field yang tidak diperlukan telah dihapus agar proses upload lebih sederhana."
+            }
         ],
-        "completedAt": "2026-06-20T06:19:47.624Z"
+        "completedAt": "2026-08-03T08:14:11.806Z"
     },
-    "isMaintenance": true
+    "isMaintenance": false
 }
