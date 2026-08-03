@@ -49,7 +49,7 @@ function showNotifDetail(event, header, details, id = null) {
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 ml-1">Update Utama</label>
                         <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold text-gray-800">
-                            ${header}
+                            ${escapeNoticeHtml(header)}
                         </div>
                     </div>
                     
@@ -57,7 +57,7 @@ function showNotifDetail(event, header, details, id = null) {
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 ml-1">Rincian Perbaikan</label>
                         <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs text-gray-600 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-medium">
-                            ${details}
+                            ${escapeNoticeHtml(details)}
                         </div>
                     </div>
                     ` : ''}
@@ -183,6 +183,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 // ---- Check for Post-Maintenance Update Notice ("What's New") ----
+function escapeNoticeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[char]));
+}
+
 async function checkUpdateNotice() {
     try {
         console.log('[Update Notice] Checking for new updates...');
@@ -221,10 +231,10 @@ function showUpdateModal(data) {
     const detailsLines = data.details
         ? (Array.isArray(data.details) ? data.details : String(data.details).split('\n'))
         : [];
-    const detailsHtml = detailsLines.filter(l => l.trim()).map(line =>
-        `<div class="flex items-start gap-4 p-3 bg-gray-50 rounded-2xl border border-gray-100/50">
-            <div class="w-2 h-2 mt-2 bg-blue-500 rounded-full shadow-sm shadow-blue-200"></div>
-            <p class="text-sm font-medium text-gray-700 leading-relaxed">${line.replace(/^[-\*\+]\s*/, '')}</p>
+    const detailsHtml = detailsLines.filter(l => String(l).trim()).map((line, index) =>
+        `<div class="flex items-start gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100/50">
+            <span class="w-6 h-6 shrink-0 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-black">${index + 1}</span>
+            <p class="text-sm font-medium text-gray-700 leading-relaxed">${escapeNoticeHtml(String(line).replace(/^\s*\d+\.\s*/, '').replace(/^[-\*\+]\s*/, ''))}</p>
         </div>`
     ).join('');
 
@@ -237,7 +247,7 @@ function showUpdateModal(data) {
                     </svg>
                 </div>
                 <h2 class="text-2xl font-black text-gray-900 leading-tight mb-2 uppercase tracking-tight">Pembaruan Selesai!</h2>
-                <p class="text-sm font-bold text-blue-500/80 uppercase tracking-widest">${data.title || 'Sistem Kembali Normal'}</p>
+                <p class="text-sm font-bold text-blue-500/80 uppercase tracking-widest">${escapeNoticeHtml(data.title || 'Sistem Kembali Normal')}</p>
             </div>
 
             <div class="space-y-3 max-h-[350px] overflow-y-auto px-1 custom-scrollbar mb-10">
@@ -628,11 +638,12 @@ function renderNotifications() {
 
         // --- SPECIAL UI: Maintenance Completion ---
         if (n.title.includes('Perbaikan Selesai')) {
-            const parts = n.message.split(' — ');
-            const header = parts[0].replace('Sistem kembali online: ', '');
-            const details = parts[1] || '';
+            const lines = String(n.message || '').split('\n').map(line => line.trim()).filter(Boolean);
+            const header = lines.shift() || 'Sistem kembali online';
+            const detailsLines = lines.map(line => line.replace(/^\s*\d+\.\s*/, '')).filter(Boolean);
+            const details = detailsLines.join('\n');
             const mapId = `notif_${n.id}`;
-            window._notifDetailsMap[mapId] = { header, details };
+            window._notifDetailsMap[mapId] = { header, details: detailsLines.join('\n') };
 
             return `
                 <div class="relative group px-4 py-3 rounded-xl ${unreadClass} hover:bg-gray-100/50 transition-all cursor-default border border-transparent hover:border-emerald-100">
@@ -647,13 +658,13 @@ function renderNotifications() {
                                         DETAIL
                                     </button>` : ''}
                             </div>
-                            <p class="text-[10px] font-bold text-emerald-600 mt-1 line-clamp-1">${header}</p>
+                             <p class="text-[10px] font-bold text-emerald-600 mt-1 line-clamp-1">${escapeNoticeHtml(header)}</p>
                             <p class="text-[9px] text-gray-400 mt-1 font-bold uppercase">${time}</p>
                             
                             <!-- Inline Detail Card (Box) -->
                             <div id="detail-box-${mapId}" class="hidden mt-3 p-3 bg-emerald-50/50 rounded-[1.2rem] border border-emerald-100/50 transition-all duration-300 overflow-hidden">
                                 <p class="text-[10px] font-black text-emerald-800 uppercase tracking-tighter mb-1.5 pb-1 border-b border-emerald-100">Rincian Perbaikan</p>
-                                <p class="text-[10px] text-gray-600 leading-relaxed font-medium">${details.replace(/\n/g, '<br>')}</p>
+                                 <ol class="space-y-1.5">${detailsLines.map((detail, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed font-medium"><span class="font-black text-emerald-600">${index + 1}.</span><span>${escapeNoticeHtml(detail)}</span></li>`).join('')}</ol>
                                 <button onclick="showNotifDetail(null, null, null, '${mapId}')" class="mt-2.5 w-full py-1.5 bg-white border border-emerald-100 text-[#10b981] text-[8px] font-black uppercase rounded-lg hover:bg-emerald-50 transition-all">Lihat Mode Fokus</button>
                             </div>
                         </div>
@@ -670,9 +681,9 @@ function renderNotifications() {
                             </div>
                             <span class="text-[11px] font-black text-gray-800 uppercase tracking-tight">Detail Perbaikan</span>
                         </div>
-                        <p class="text-[10px] font-bold text-gray-700 leading-relaxed mb-2">${header}</p>
-                        <div class="bg-emerald-50/50 rounded-xl p-2.5">
-                            <p class="text-[10px] text-gray-600 leading-relaxed whitespace-pre-wrap">${details}</p>
+                         <p class="text-[10px] font-bold text-gray-700 leading-relaxed mb-2">${escapeNoticeHtml(header)}</p>
+                         <div class="bg-emerald-50/50 rounded-xl p-2.5">
+                             <ol class="space-y-1.5">${detailsLines.map((detail, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed"><span class="font-black text-emerald-600">${index + 1}.</span><span>${escapeNoticeHtml(detail)}</span></li>`).join('')}</ol>
                         </div>
                     </div>
                     ` : ''}
@@ -685,8 +696,8 @@ function renderNotifications() {
             <div class="flex items-start gap-3 px-4 py-3 rounded-xl ${unreadClass} hover:bg-gray-50 transition-all group cursor-default">
                 <div class="mt-0.5 w-2 h-2 rounded-full ${iconColor} bg-current shrink-0 ${dotClass}"></div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-[11px] font-black text-gray-900 leading-snug">${n.title}</p>
-                    <p class="text-[10px] text-gray-500 mt-0.5 leading-relaxed line-clamp-2">${n.message}</p>
+                    <p class="text-[11px] font-black text-gray-900 leading-snug">${escapeNoticeHtml(n.title)}</p>
+                    <p class="text-[10px] text-gray-500 mt-0.5 leading-relaxed line-clamp-2">${escapeNoticeHtml(n.message)}</p>
                     <p class="text-[9px] text-gray-400 mt-1 font-bold uppercase">${time}</p>
                 </div>
             </div>
@@ -2007,13 +2018,16 @@ async function toggleMaintenance() {
                 </div>
                 <div id="maint-details-container" class="space-y-3">
                     <label class="block text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-bold">Detail Perbaikan</label>
-                    <div class="maint-detail-item flex gap-2">
-                        <input type="text" class="maint-detail-input w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Contoh: Loading halaman lebih cepat">
+                    <div class="maint-detail-item rounded-2xl border border-gray-200 bg-gray-50/70 p-3">
+                        <div class="flex items-center gap-2">
+                            <span class="maint-detail-number w-7 h-7 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black">1.</span>
+                            <input type="text" class="maint-detail-input flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Tulis detail perbaikan...">
+                        </div>
+                        <p class="pl-9 pt-1.5 text-[10px] text-gray-400 leading-relaxed">Jelaskan perubahan atau perbaikan yang dilakukan.</p>
                     </div>
                 </div>
-                <button type="button" id="btn-add-detail" class="w-full py-3 rounded-xl border border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 text-xs font-bold transition-all flex items-center justify-center gap-2">
+                <button type="button" id="btn-add-detail" title="Tambah detail perbaikan" aria-label="Tambah detail perbaikan" class="mx-auto w-10 h-10 rounded-full border border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-500 hover:text-indigo-600 text-xl font-bold transition-all flex items-center justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                    Tambah Detail
                 </button>
             </div>
         `;
@@ -2023,7 +2037,9 @@ async function toggleMaintenance() {
             formHtml,
             async () => {
                 const title = document.getElementById('maint-res-title').value;
-                const details = Array.from(document.querySelectorAll('.maint-detail-input')).map(i => i.value.trim()).filter(v => v);
+                const details = Array.from(document.querySelectorAll('.maint-detail-input'))
+                    .map(i => i.value.trim())
+                    .filter(v => v);
 
                 if (!title) {
                     Toast.error('Harap pilih judul perbaikan');
@@ -2049,16 +2065,29 @@ async function toggleMaintenance() {
             const addBtn = document.getElementById('btn-add-detail');
             const container = document.getElementById('maint-details-container');
             if (addBtn && container) {
+                const renumberDetails = () => {
+                    container.querySelectorAll('.maint-detail-item').forEach((item, index) => {
+                        const number = item.querySelector('.maint-detail-number');
+                        if (number) number.textContent = `${index + 1}.`;
+                    });
+                };
+
                 addBtn.onclick = () => {
                     const div = document.createElement('div');
-                    div.className = 'maint-detail-item flex gap-2 animate-fade-in';
+                    div.className = 'maint-detail-item rounded-2xl border border-gray-200 bg-gray-50/70 p-3 animate-fade-in';
                     div.innerHTML = `
-                        <input type="text" class="maint-detail-input w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Detail tambahan...">
-                        <button onclick="this.parentElement.remove()" class="p-3 text-gray-400 hover:text-red-500 transition-colors">
+                        <div class="flex items-center gap-2">
+                            <span class="maint-detail-number w-7 h-7 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black"></span>
+                            <input type="text" class="maint-detail-input flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Tulis detail perbaikan...">
+                            <button type="button" title="Hapus detail" aria-label="Hapus detail" onclick="this.closest('.maint-detail-item').remove(); this.closest('#maint-details-container')?.querySelectorAll('.maint-detail-item').forEach((item, index) => item.querySelector('.maint-detail-number').textContent = (index + 1) + '.')" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
+                            </button>
+                        </div>
+                        <p class="pl-9 pt-1.5 text-[10px] text-gray-400 leading-relaxed">Jelaskan perubahan atau perbaikan yang dilakukan.</p>
                     `;
                     container.appendChild(div);
+                    renumberDetails();
+                    div.querySelector('.maint-detail-input')?.focus();
                 };
             }
         }, 100);

@@ -2066,7 +2066,21 @@ app.all('/api/system/maintenance', authenticateToken, authorizeRole('super_admin
 
         // Notification: Maintenance status change
         if (!isMaintenance && result) {
-            createSystemNotification({ title: '✅ Perbaikan Selesai', message: 'Sistem kembali online: ' + (result.title || 'Selesai') + (result.details ? ' — ' + result.details : ''), type: 'success' });
+            const details = Array.isArray(result.details)
+                ? result.details.map(detail => String(detail).trim()).filter(Boolean)
+                : String(result.details || '').split('\n').map(detail => detail.trim()).filter(Boolean);
+            const notificationMessage = [
+                result.title || 'Sistem kembali online',
+                ...details.map((detail, index) => `${index + 1}. ${detail}`)
+            ].join('\n');
+
+            // Global notification: visible to every authenticated user regardless of role/zone.
+            await createNotification({
+                title: '✅ Perbaikan Selesai',
+                message: notificationMessage,
+                type: 'success',
+                link: 'dashboard.html'
+            });
         }
 
         res.json({ success: true, status });
