@@ -17,6 +17,38 @@ let isFetching = false;
 window._zonaCache = [];
 window._notifDetailsMap = {}; // Global map for notification details
 
+function normalizeNoticeDetails(details) {
+    const entries = Array.isArray(details) ? details : String(details || '').split('\n');
+    const items = [];
+    let current = null;
+
+    entries.forEach(entry => {
+        if (entry && typeof entry === 'object') {
+            const summary = String(entry.summary || entry.title || entry.label || '').trim();
+            const description = String(entry.description || entry.detail || '').trim();
+            if (summary || description) {
+                items.push({ summary: summary || description, description: summary ? description : '' });
+            }
+            current = null;
+            return;
+        }
+
+        const line = String(entry || '').trim();
+        if (!line) return;
+        const numbered = line.match(/^\s*\d+\.\s*(.*)$/);
+        if (numbered) {
+            current = { summary: numbered[1].trim(), description: '' };
+            items.push(current);
+        } else if (current) {
+            current.description = current.description ? `${current.description} ${line}` : line;
+        } else {
+            items.push({ summary: line, description: '' });
+        }
+    });
+
+    return items;
+}
+
 // ---- Show Notification Detail Modal ----
 function showNotifDetail(event, header, details, id = null) {
     if (event) event.stopPropagation(); // Prevent marking notification as read
@@ -29,6 +61,7 @@ function showNotifDetail(event, header, details, id = null) {
 
     if (!header) return; // Guard
 
+    const detailItems = normalizeNoticeDetails(details);
     Swal.fire({
         title: '<div class="flex items-center gap-2 px-1"><span class="text-xs font-black text-gray-900 uppercase">Detail Perbaikan</span></div>',
         html: `
@@ -56,8 +89,12 @@ function showNotifDetail(event, header, details, id = null) {
                     ${details ? `
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 ml-1">Rincian Perbaikan</label>
-                        <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs text-gray-600 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-medium">
-                            ${escapeNoticeHtml(details)}
+                        <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs text-gray-600 leading-relaxed max-h-48 overflow-y-auto font-medium">
+                            <ol class="space-y-2">${detailItems.map((item, index) => `
+                                <li class="flex items-start gap-2">
+                                    <span class="font-black text-emerald-600">${index + 1}.</span>
+                                    <span><strong>${escapeNoticeHtml(item.summary)}</strong>${item.description ? `<br><span class="text-gray-500">${escapeNoticeHtml(item.description)}</span>` : ''}</span>
+                                </li>`).join('')}</ol>
                         </div>
                     </div>
                     ` : ''}
@@ -228,13 +265,14 @@ function showUpdateModal(data) {
     modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in';
 
     // Convert details list to HTML (details may be a string or an array)
-    const detailsLines = data.details
-        ? (Array.isArray(data.details) ? data.details : String(data.details).split('\n'))
-        : [];
-    const detailsHtml = detailsLines.filter(l => String(l).trim()).map((line, index) =>
+    const detailItems = normalizeNoticeDetails(data.details);
+    const detailsHtml = detailItems.map((item, index) =>
         `<div class="flex items-start gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100/50">
             <span class="w-6 h-6 shrink-0 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-black">${index + 1}</span>
-            <p class="text-sm font-medium text-gray-700 leading-relaxed">${escapeNoticeHtml(String(line).replace(/^\s*\d+\.\s*/, '').replace(/^[-\*\+]\s*/, ''))}</p>
+            <p class="text-sm font-medium text-gray-700 leading-relaxed">
+                <strong>${escapeNoticeHtml(item.summary)}</strong>
+                ${item.description ? `<br><span class="text-xs text-gray-400">${escapeNoticeHtml(item.description)}</span>` : ''}
+            </p>
         </div>`
     ).join('');
 
@@ -640,10 +678,10 @@ function renderNotifications() {
         if (n.title.includes('Perbaikan Selesai')) {
             const lines = String(n.message || '').split('\n').map(line => line.trim()).filter(Boolean);
             const header = lines.shift() || 'Sistem kembali online';
-            const detailsLines = lines.map(line => line.replace(/^\s*\d+\.\s*/, '')).filter(Boolean);
-            const details = detailsLines.join('\n');
+            const detailItems = normalizeNoticeDetails(lines);
+            const details = detailItems.length > 0;
             const mapId = `notif_${n.id}`;
-            window._notifDetailsMap[mapId] = { header, details: detailsLines.join('\n') };
+            window._notifDetailsMap[mapId] = { header, details: detailItems };
 
             return `
                 <div class="relative group px-4 py-3 rounded-xl ${unreadClass} hover:bg-gray-100/50 transition-all cursor-default border border-transparent hover:border-emerald-100">
@@ -664,7 +702,7 @@ function renderNotifications() {
                             <!-- Inline Detail Card (Box) -->
                             <div id="detail-box-${mapId}" class="hidden mt-3 p-3 bg-emerald-50/50 rounded-[1.2rem] border border-emerald-100/50 transition-all duration-300 overflow-hidden">
                                 <p class="text-[10px] font-black text-emerald-800 uppercase tracking-tighter mb-1.5 pb-1 border-b border-emerald-100">Rincian Perbaikan</p>
-                                 <ol class="space-y-1.5">${detailsLines.map((detail, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed font-medium"><span class="font-black text-emerald-600">${index + 1}.</span><span>${escapeNoticeHtml(detail)}</span></li>`).join('')}</ol>
+                                 <ol class="space-y-1.5">${detailItems.map((item, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed font-medium"><span class="font-black text-emerald-600">${index + 1}.</span><span><strong>${escapeNoticeHtml(item.summary)}</strong>${item.description ? `<br><span class="text-gray-500">${escapeNoticeHtml(item.description)}</span>` : ''}</span></li>`).join('')}</ol>
                                 <button onclick="showNotifDetail(null, null, null, '${mapId}')" class="mt-2.5 w-full py-1.5 bg-white border border-emerald-100 text-[#10b981] text-[8px] font-black uppercase rounded-lg hover:bg-emerald-50 transition-all">Lihat Mode Fokus</button>
                             </div>
                         </div>
@@ -683,7 +721,7 @@ function renderNotifications() {
                         </div>
                          <p class="text-[10px] font-bold text-gray-700 leading-relaxed mb-2">${escapeNoticeHtml(header)}</p>
                          <div class="bg-emerald-50/50 rounded-xl p-2.5">
-                             <ol class="space-y-1.5">${detailsLines.map((detail, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed"><span class="font-black text-emerald-600">${index + 1}.</span><span>${escapeNoticeHtml(detail)}</span></li>`).join('')}</ol>
+                             <ol class="space-y-1.5">${detailItems.map((item, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed"><span class="font-black text-emerald-600">${index + 1}.</span><span><strong>${escapeNoticeHtml(item.summary)}</strong>${item.description ? `<br><span class="text-gray-500">${escapeNoticeHtml(item.description)}</span>` : ''}</span></li>`).join('')}</ol>
                         </div>
                     </div>
                     ` : ''}
@@ -2021,9 +2059,9 @@ async function toggleMaintenance() {
                     <div class="maint-detail-item rounded-2xl border border-gray-200 bg-gray-50/70 p-3">
                         <div class="flex items-center gap-2">
                             <span class="maint-detail-number w-7 h-7 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black">1.</span>
-                            <input type="text" class="maint-detail-input flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Tulis detail perbaikan...">
+                            <input type="text" class="maint-detail-summary flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Ringkasan perbaikan...">
                         </div>
-                        <p class="pl-9 pt-1.5 text-[10px] text-gray-400 leading-relaxed">Jelaskan perubahan atau perbaikan yang dilakukan.</p>
+                        <input type="text" class="maint-detail-description mt-2 ml-9 w-[calc(100%-2.25rem)] bg-white border border-gray-200 rounded-lg px-3 py-2 text-[11px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Detail penjelasan (subteks)...">
                     </div>
                 </div>
                 <button type="button" id="btn-add-detail" title="Tambah detail perbaikan" aria-label="Tambah detail perbaikan" class="mx-auto w-10 h-10 rounded-full border border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-500 hover:text-indigo-600 text-xl font-bold transition-all flex items-center justify-center">
@@ -2037,9 +2075,12 @@ async function toggleMaintenance() {
             formHtml,
             async () => {
                 const title = document.getElementById('maint-res-title').value;
-                const details = Array.from(document.querySelectorAll('.maint-detail-input'))
-                    .map(i => i.value.trim())
-                    .filter(v => v);
+                const details = Array.from(document.querySelectorAll('.maint-detail-item'))
+                    .map(item => ({
+                        summary: item.querySelector('.maint-detail-summary')?.value.trim() || '',
+                        description: item.querySelector('.maint-detail-description')?.value.trim() || ''
+                    }))
+                    .filter(item => item.summary || item.description);
 
                 if (!title) {
                     Toast.error('Harap pilih judul perbaikan');
@@ -2047,6 +2088,10 @@ async function toggleMaintenance() {
                 }
                 if (details.length === 0) {
                     Toast.error('Harap isi minimal satu detail');
+                    return false;
+                }
+                if (details.some(item => !item.summary || !item.description)) {
+                    Toast.error('Isi ringkasan dan detail penjelasan pada setiap item');
                     return false;
                 }
 
@@ -2078,16 +2123,16 @@ async function toggleMaintenance() {
                     div.innerHTML = `
                         <div class="flex items-center gap-2">
                             <span class="maint-detail-number w-7 h-7 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black"></span>
-                            <input type="text" class="maint-detail-input flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Tulis detail perbaikan...">
+                            <input type="text" class="maint-detail-summary flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Ringkasan perbaikan...">
                             <button type="button" title="Hapus detail" aria-label="Hapus detail" onclick="this.closest('.maint-detail-item').remove(); this.closest('#maint-details-container')?.querySelectorAll('.maint-detail-item').forEach((item, index) => item.querySelector('.maint-detail-number').textContent = (index + 1) + '.')" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
-                        <p class="pl-9 pt-1.5 text-[10px] text-gray-400 leading-relaxed">Jelaskan perubahan atau perbaikan yang dilakukan.</p>
+                        <input type="text" class="maint-detail-description mt-2 ml-9 w-[calc(100%-2.25rem)] bg-white border border-gray-200 rounded-lg px-3 py-2 text-[11px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10 transition-all" placeholder="Detail penjelasan (subteks)...">
                     `;
                     container.appendChild(div);
                     renumberDetails();
-                    div.querySelector('.maint-detail-input')?.focus();
+                    div.querySelector('.maint-detail-summary')?.focus();
                 };
             }
         }, 100);

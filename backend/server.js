@@ -2027,6 +2027,17 @@ app.all('/api/system/maintenance', authenticateToken, authorizeRole('super_admin
         
         const isMaintenance = req.body.isMaintenance !== undefined ? req.body.isMaintenance : req.body.is_maintenance;
         const result = req.body.result;
+        const normalizedDetails = Array.isArray(result?.details)
+            ? result.details.map(detail => {
+                if (detail && typeof detail === 'object') {
+                    const summary = String(detail.summary || detail.title || detail.label || '').trim();
+                    const description = String(detail.description || detail.detail || '').trim();
+                    return { summary: summary || description, description: summary ? description : '' };
+                }
+                const summary = String(detail || '').trim();
+                return { summary, description: '' };
+            }).filter(detail => detail.summary || detail.description)
+            : String(result?.details || '').split('\n').map(detail => ({ summary: detail.trim(), description: '' })).filter(detail => detail.summary);
 
         // Read current status to merge with lastResult
         const currentStatus = await getMaintenanceStatus();
@@ -2043,7 +2054,7 @@ app.all('/api/system/maintenance', authenticateToken, authorizeRole('super_admin
             status.lastResult = {
                 id: 'maint_' + Date.now(),
                 title: result.title,
-                details: result.details,
+                details: normalizedDetails,
                 completedAt: new Date().toISOString()
             };
         }
@@ -2066,12 +2077,12 @@ app.all('/api/system/maintenance', authenticateToken, authorizeRole('super_admin
 
         // Notification: Maintenance status change
         if (!isMaintenance && result) {
-            const details = Array.isArray(result.details)
-                ? result.details.map(detail => String(detail).trim()).filter(Boolean)
-                : String(result.details || '').split('\n').map(detail => detail.trim()).filter(Boolean);
             const notificationMessage = [
                 result.title || 'Sistem kembali online',
-                ...details.map((detail, index) => `${index + 1}. ${detail}`)
+                ...normalizedDetails.flatMap((detail, index) => [
+                    `${index + 1}. ${detail.summary}`,
+                    ...(detail.description ? [`   ${detail.description}`] : [])
+                ])
             ].join('\n');
 
             // Global notification: visible to every authenticated user regardless of role/zone.
