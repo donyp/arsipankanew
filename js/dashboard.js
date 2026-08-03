@@ -83,11 +83,43 @@ function toggleInlineDetail(event, id) {
     }
 }
 
+// ---- Initial Dashboard Loading State ----
+// Keep one loader over the dashboard while the archive list, cards, and chart
+// are all being prepared. The archive list has its own loader for refreshes,
+// so this one uses a separate ID and is only removed after initial rendering.
+function showDashboardInitialLoading() {
+    const target = document.getElementById('main-content');
+    if (!target || document.getElementById('dashboard-initial-loading')) return;
+
+    target.style.position = 'relative';
+    const loader = document.createElement('div');
+    loader.id = 'dashboard-initial-loading';
+    loader.className = 'absolute inset-0 z-[60] flex items-center justify-center bg-gray-950/80 backdrop-blur-sm';
+    loader.innerHTML = `
+        <div class="premium-loader">
+            <div class="loader-rings">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+            </div>
+            <span class="loader-text">Menyiapkan dashboard...</span>
+        </div>
+    `;
+    target.appendChild(loader);
+}
+
+function hideDashboardInitialLoading() {
+    document.getElementById('dashboard-initial-loading')?.remove();
+}
+
 // ---- Initialize Dashboard ----
 document.addEventListener('DOMContentLoaded', async () => {
     const user = await initAuth();
     if (!user) return;
 
+    showDashboardInitialLoading();
+
+    try {
     setCurrentDate();
     await loadZonas();
     populateFilters();
@@ -142,6 +174,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             notifMenu?.classList.add('invisible', 'opacity-0', 'translate-y-2');
         }
     });
+    } finally {
+        // The chart and all statistic cards have now been rendered (or have
+        // completed with an error handled by their own loaders).
+        hideDashboardInitialLoading();
+    }
 });
 
 
