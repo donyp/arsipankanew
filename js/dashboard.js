@@ -262,7 +262,7 @@ function showUpdateModal(data) {
 
     const modal = document.createElement('div');
     modal.id = modalId;
-    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in';
+    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-gray-900/40 backdrop-blur-sm animate-fade-in overflow-y-auto';
 
     // Convert details list to HTML (details may be a string or an array)
     const detailItems = normalizeNoticeDetails(data.details);
@@ -277,23 +277,23 @@ function showUpdateModal(data) {
     ).join('');
 
     modal.innerHTML = `
-        <div class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 animate-scale-up border border-white/20">
-            <div class="text-center mb-10">
-                <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-inner ring-4 ring-blue-50/50">
-                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-white w-full max-w-md max-h-[calc(100vh-2rem)] rounded-[2rem] shadow-2xl p-5 sm:p-7 animate-scale-up border border-white/20 flex flex-col">
+            <div class="text-center mb-5 shrink-0">
+                <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner ring-4 ring-blue-50/50">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h2 class="text-2xl font-black text-gray-900 leading-tight mb-2 uppercase tracking-tight">Pembaruan Selesai!</h2>
-                <p class="text-sm font-bold text-blue-500/80 uppercase tracking-widest">${escapeNoticeHtml(data.title || 'Sistem Kembali Normal')}</p>
+                <h2 class="text-xl font-black text-gray-900 leading-tight mb-1 uppercase tracking-tight">Pembaruan Selesai!</h2>
+                <p class="text-[11px] font-bold text-blue-500/80 uppercase tracking-widest">${escapeNoticeHtml(data.title || 'Sistem Kembali Normal')}</p>
             </div>
 
-            <div class="space-y-3 max-h-[350px] overflow-y-auto px-1 custom-scrollbar mb-10">
+            <div class="space-y-2 max-h-[min(42vh,320px)] overflow-y-auto px-1 custom-scrollbar mb-5">
                 ${detailsHtml}
             </div>
 
-            <div class="pt-2">
-                <button onclick="readUpdateNotice('${data.id}')" class="w-full py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-gray-800 transition-all shadow-xl shadow-gray-200 active:scale-95 uppercase tracking-[0.2em] text-[10px]">
+            <div class="pt-1 shrink-0">
+                <button onclick="readUpdateNotice('${data.id}')" class="w-full py-3 bg-gray-900 text-white font-black rounded-xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 active:scale-95 uppercase tracking-[0.16em] text-[10px]">
                     Selesai & Lanjutkan
                 </button>
             </div>
@@ -691,40 +691,16 @@ function renderNotifications() {
                             <div class="flex items-center justify-between gap-1.5">
                                 <span class="text-[11px] font-black text-gray-900 leading-none">✅ Perbaikan Selesai</span>
                                 ${details ? `
-                                    <button onclick="toggleInlineDetail(event, '${mapId}')" 
-                                            class="text-[8px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full animate-pulse hover:bg-emerald-500 hover:text-white transition-all shadow-sm ring-1 ring-emerald-100">
+                                    <button onclick="openMaintenanceNotification(event, '${mapId}', '${n.id}')"
+                                            class="text-[8px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full hover:bg-emerald-500 hover:text-white transition-all shadow-sm ring-1 ring-emerald-100">
                                         DETAIL
                                     </button>` : ''}
                             </div>
                              <p class="text-[10px] font-bold text-emerald-600 mt-1 line-clamp-1">${escapeNoticeHtml(header)}</p>
                             <p class="text-[9px] text-gray-400 mt-1 font-bold uppercase">${time}</p>
                             
-                            <!-- Inline Detail Card (Box) -->
-                            <div id="detail-box-${mapId}" class="hidden mt-3 p-3 bg-emerald-50/50 rounded-[1.2rem] border border-emerald-100/50 transition-all duration-300 overflow-hidden">
-                                <p class="text-[10px] font-black text-emerald-800 uppercase tracking-tighter mb-1.5 pb-1 border-b border-emerald-100">Rincian Perbaikan</p>
-                                 <ol class="space-y-1.5">${detailItems.map((item, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed font-medium"><span class="font-black text-emerald-600">${index + 1}.</span><span><strong>${escapeNoticeHtml(item.summary)}</strong>${item.description ? `<br><span class="text-gray-500">${escapeNoticeHtml(item.description)}</span>` : ''}</span></li>`).join('')}</ol>
-                                <button onclick="showNotifDetail(null, null, null, '${mapId}')" class="mt-2.5 w-full py-1.5 bg-white border border-emerald-100 text-[#10b981] text-[8px] font-black uppercase rounded-lg hover:bg-emerald-50 transition-all">Lihat Mode Fokus</button>
-                            </div>
                         </div>
                     </div>
-                    
-                    ${details ? `
-                    <!-- Hover Detail Card (Positioned to the LEFT to avoid clipping) -->
-                    <div class="absolute right-full mr-4 top-0 w-64 bg-white border border-emerald-100 shadow-2xl rounded-2xl p-4 opacity-0 scale-95 translate-x-[10px] group-hover:opacity-100 group-hover:scale-100 group-hover:translate-x-0 pointer-events-none transition-all duration-300 z-[100]">
-                        <div class="flex items-center gap-2 mb-2 pb-2 border-b border-emerald-50">
-                            <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center">
-                                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <span class="text-[11px] font-black text-gray-800 uppercase tracking-tight">Detail Perbaikan</span>
-                        </div>
-                         <p class="text-[10px] font-bold text-gray-700 leading-relaxed mb-2">${escapeNoticeHtml(header)}</p>
-                         <div class="bg-emerald-50/50 rounded-xl p-2.5">
-                             <ol class="space-y-1.5">${detailItems.map((item, index) => `<li class="flex items-start gap-2 text-[10px] text-gray-600 leading-relaxed"><span class="font-black text-emerald-600">${index + 1}.</span><span><strong>${escapeNoticeHtml(item.summary)}</strong>${item.description ? `<br><span class="text-gray-500">${escapeNoticeHtml(item.description)}</span>` : ''}</span></li>`).join('')}</ol>
-                        </div>
-                    </div>
-                    ` : ''}
                 </div>
             `;
         }
@@ -749,6 +725,34 @@ function updateNotifBadge() {
     const hasUnread = notifData.some(n => !n.is_read);
     badge.classList.toggle('hidden', !hasUnread);
 }
+
+async function markNotificationRead(id) {
+    const notification = notifData.find(n => String(n.id) === String(id));
+    if (!notification || notification.is_read) return true;
+
+    notification.is_read = true;
+    renderNotifications();
+    updateNotifBadge();
+
+    try {
+        await API.put(`/api/notifications/${encodeURIComponent(id)}/read`);
+        return true;
+    } catch (err) {
+        notification.is_read = false;
+        renderNotifications();
+        updateNotifBadge();
+        Toast.error('Gagal menandai notifikasi.');
+        return false;
+    }
+}
+
+window.openMaintenanceNotification = async function (event, mapId, notificationId) {
+    if (event) event.stopPropagation();
+    const markedRead = await markNotificationRead(notificationId);
+    if (markedRead) {
+        showNotifDetail(null, null, null, mapId);
+    }
+};
 
 window.markAllNotifRead = async function () {
     try {

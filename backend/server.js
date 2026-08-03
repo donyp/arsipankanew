@@ -3530,6 +3530,34 @@ app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
     }
 });
 
+// PUT /api/notifications/:id/read
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+    try {
+        const notificationId = req.params.id;
+        let query = supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('id', notificationId)
+            .eq('is_read', false);
+
+        // Only allow the current user to mark notifications they can already see.
+        const visibleFilters = [
+            `user_id.eq.${req.user.userId}`,
+            'and(user_id.is.null,target_role.is.null)',
+            `target_role.eq.${req.user.role}`
+        ];
+        if (req.user.role === 'admin_zona' && req.user.zona_id) {
+            visibleFilters[2] = `and(target_role.eq.admin_zona,target_zona_id.eq.${req.user.zona_id})`;
+        }
+
+        const { error } = await query.or(visibleFilters.join(','));
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal menandai notifikasi.' });
+    }
+});
+
 // ============================================================
 // START & CLEANUP
 // ============================================================
