@@ -10,7 +10,7 @@ const CONFIG = {
     // App Constants
     CATEGORIES: [
         { value: 'PPN', label: 'PPN' },
-        { value: 'NON_PPN', label: 'NON PPN' },
+        { value: 'NON_PPN', label: 'NON' },
         { value: 'INVOICE', label: 'Invoice Merah' },
         { value: 'PIUTANG', label: 'Bukti Pembayaran Piutang' }
     ],

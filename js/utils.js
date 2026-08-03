@@ -181,7 +181,7 @@ function normalizeTipePPN(value) {
 
 function getTipePPNLabel(value) {
     const normalized = normalizeTipePPN(value);
-    return normalized === 'NON' ? 'NON PPN' : normalized || '-';
+    return normalized === 'NON' ? 'NON' : normalized || '-';
 }
 
 function formatDate(dateStr) {
@@ -201,7 +201,7 @@ function formatDateTime(dateStr) {
 // ---- Category Label ----
 function getCategoryLabel(value) {
     const cat = CONFIG.CATEGORIES.find(c => c.value === value);
-    return cat ? cat.label : (value === 'NON_PPN' ? 'NON PPN' : value);
+    return cat ? cat.label : (value === 'NON_PPN' ? 'NON' : value);
 }
 
 function getCategoryColor(value) {
