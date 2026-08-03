@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimasi Penyimpanan | Pusat Arsip Anka</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+
+    <script>
+        // Cloak the page until Auth and UI checks are done
+        document.documentElement.style.opacity = '0';
+        document.documentElement.classList.add('auth-loading');
+    </script>
+</head>
+
+<body class="bg-[#F0F2F5] min-h-screen text-gray-800 font-sans">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <!-- Sidebar (rendered by js/sidebar.js?v=ULTRACLEAN_2026) -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 hidden">
+    </aside>
+
+    <!-- Main Content -->
+    <!-- Main Content (Default to 0 margin, will be set to ml-64 via JS if not admin_zona) -->
+    <main id="main-content" class="min-h-screen transition-all duration-300 flex-1 flex flex-col">
+        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-gray-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Optimasi Penyimpanan</h2>
+                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Asisten Sistem untuk
+                        membersihkan file sampah & duplikat</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <div class="max-w-4xl mx-auto space-y-6">
+
+                <!-- Welcome Card -->
+                <div
+                    class="bg-white p-10 rounded-[2.5rem] relative overflow-hidden group shadow-xl shadow-blue-500/5 border border-gray-100">
+                    <div class="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <svg class="w-48 h-48 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                        <div
+                            class="w-24 h-24 rounded-3xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-200 shrink-0 transform group-hover:rotate-6 transition-transform duration-500">
+                            <svg class="w-12 h-12 text-white animate-pulse" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.051.046M15.571 8.572a2 2 0 011.022.547l2.387.477a6 6 0 013.86-.517l.318-.158a6 6 0 003.86-.517L20.95 8.79a2 2 0 011.051-.046M12 7v10m0 0l-1.5-1.5M12 17l1.5-1.5" />
+                            </svg>
+                        </div>
+                        <div class="text-center md:text-left flex-1">
+                            <h3 class="text-2xl font-black text-gray-900 mb-3 leading-tight">Halo Admin, Saya Siap
+                                Membantu!</h3>
+                            <p class="text-sm text-gray-500 max-w-lg leading-relaxed font-medium">
+                                Saya akan memindai database Anda untuk menemukan file duplikat, file yang hilang di
+                                storage, dan file redundan untuk mengoptimalkan kapasitas penyimpanan sistem.
+                            </p>
+                            <button id="scan-btn" onclick="startScan()"
+                                class="mt-8 px-10 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm transition-all shadow-xl shadow-blue-200 flex items-center gap-3 active:scale-95">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"
+                                        stroke-linecap="round" />
+                                </svg>
+                                Mulai Audit Penyimpanan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Container -->
+                <div id="results-container" class="hidden space-y-8 animate-fade-in">
+
+                    <!-- Progress Bar (Fake simulation for UX) -->
+                    <div id="scanning-progress"
+                        class="hidden bg-white p-8 rounded-[2rem] text-center border border-gray-100 shadow-xl shadow-blue-500/5">
+                        <div class="w-full bg-gray-100 rounded-full h-3 mb-6 overflow-hidden">
+                            <div id="scan-bar"
+                                class="bg-blue-600 h-full rounded-full transition-all duration-500 shadow-lg shadow-blue-200"
+                                style="width: 0%"></div>
+                        </div>
+                        <p id="scan-status" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            Menganalisis file...</p>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div
+                            class="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl shadow-blue-500/5 text-center">
+                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">File Duplikat</p>
+                            <h4 id="count-dupes" class="text-4xl font-black text-amber-500 mt-2">0</h4>
+                        </div>
+                        <div
+                            class="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl shadow-blue-500/5 text-center">
+                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">File Hilang (Ghost)
+                            </p>
+                            <h4 id="count-ghosts" class="text-4xl font-black text-red-500 mt-2">0</h4>
+                        </div>
+                        <div
+                            class="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl shadow-blue-500/5 text-center">
+                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Kandidat Sampah</p>
+                            <h4 id="count-cands" class="text-4xl font-black text-blue-600 mt-2">0</h4>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Lists -->
+                    <div class="space-y-6">
+                        <!-- Duplicates Section -->
+                        <div id="section-dupes"
+                            class="hidden bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl shadow-blue-500/5">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-sm font-bold text-gray-900 flex items-center gap-3">
+                                    <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                                    File Duplikat Ditemukan
+                                </h3>
+                                <button onclick="cleanup('duplicates')"
+                                    class="text-[10px] font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg uppercase tracking-wider hover:bg-amber-100 transition-all">Hapus
+                                    Semua Duplikat</button>
+                            </div>
+                            <div id="list-dupes" class="space-y-3 max-h-80 overflow-y-auto pr-3 custom-scrollbar"></div>
+                        </div>
+
+                        <!-- Ghosts Section -->
+                        <div id="section-ghosts"
+                            class="hidden bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl shadow-blue-500/5">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-sm font-bold text-gray-900 flex items-center gap-3">
+                                    <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                    File Hilang (Ghost Record)
+                                </h3>
+                                <button onclick="cleanup('ghosts')"
+                                    class="text-[10px] font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg uppercase tracking-wider hover:bg-red-100 transition-all">Hapus
+                                    Record Hilang</button>
+                            </div>
+                            <div id="list-ghosts" class="space-y-3 max-h-80 overflow-y-auto pr-3 custom-scrollbar">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Action -->
+                    <div class="flex justify-center pt-6">
+                        <button onclick="cleanupAll()"
+                            class="px-12 py-5 rounded-[2rem] bg-gray-900 text-white font-bold uppercase tracking-widest text-xs hover:bg-black transition-all shadow-2xl active:scale-95">
+                            Bersihkan Berdasarkan Rekomendasi Sistem
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden text-center py-20 bg-white rounded-[2.5rem] border border-gray-100">
+                    <div class="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-12 h-12 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900">Database Sempurna!</h3>
+                    <p class="text-sm text-gray-500 mt-2 font-medium">Tidak ditemukan file sampah atau duplikat saat
+                        ini.</p>
+                </div>
+
+            </div>
+        </div>
+    </main>
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let lastScanResults = null;
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initAuth();
+        });
+
+        async function startScan() {
+            const btn = document.getElementById('scan-btn');
+            const container = document.getElementById('results-container');
+            const progress = document.getElementById('scanning-progress');
+            const bar = document.getElementById('scan-bar');
+            const status = document.getElementById('scan-status');
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span class="ml-2">Scanning...</span>';
+
+            container.classList.remove('hidden');
+            progress.classList.remove('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+
+            // Simulate progress
+            let p = 0;
+            const interval = setInterval(() => {
+                p += Math.random() * 15;
+                if (p > 90) clearInterval(interval);
+                bar.style.width = Math.min(p, 90) + '%';
+                if (p < 30) status.textContent = 'Membaca database...';
+                else if (p < 60) status.textContent = 'Memeriksa jalur file...';
+                else status.textContent = 'Menganalisis kemiripan file...';
+            }, 300);
+
+            try {
+                const results = await API.get('/api/files/cleanup-scan');
+                lastScanResults = results;
+
+                clearInterval(interval);
+                bar.style.width = '100%';
+                status.textContent = 'Audit Selesai!';
+
+                setTimeout(() => {
+                    progress.classList.add('hidden');
+                    renderResults(results);
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3" stroke-linecap="round"/></svg><span class="ml-2">Scan Ulang</span>';
+                }, 800);
+
+            } catch (err) {
+                Toast.error('Gagal menjalankan scan.');
+                clearInterval(interval);
+                btn.disabled = false;
+                btn.innerHTML = 'Coba Lagi';
+            }
+        }
+
+        function renderResults(res) {
+            const hasDupes = res.duplicates.length > 0;
+            const hasGhosts = res.ghosts.length > 0;
+
+            if (!hasDupes && !hasGhosts && res.candidates.length === 0) {
+                document.getElementById('results-container').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('count-dupes').textContent = res.duplicates.length;
+            document.getElementById('count-ghosts').textContent = res.ghosts.length;
+            document.getElementById('count-cands').textContent = res.candidates.length;
+
+            // Dupes
+            const sectionDupes = document.getElementById('section-dupes');
+            const listDupes = document.getElementById('list-dupes');
+            if (hasDupes) {
+                sectionDupes.classList.remove('hidden');
+                listDupes.innerHTML = res.duplicates.map(f => createItemRow(f, 'Duplicate')).join('');
+            } else sectionDupes.classList.add('hidden');
+
+            // Ghosts
+            const sectionGhosts = document.getElementById('section-ghosts');
+            const listGhosts = document.getElementById('list-ghosts');
+            if (hasGhosts) {
+                sectionGhosts.classList.remove('hidden');
+                listGhosts.innerHTML = res.ghosts.map(f => createItemRow(f, 'Ghost')).join('');
+            } else sectionGhosts.classList.add('hidden');
+        }
+
+        function createItemRow(f, type) {
+            const colorClass = type === 'Ghost' ? 'red' : 'amber';
+            const colorHex = type === 'Ghost' ? '#ef4444' : '#f59e0b';
+
+            return `
+                <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white hover:border-${colorClass}-200 transition-all">
+                    <div class="flex items-center gap-4 overflow-hidden">
+                        <div class="w-10 h-10 rounded-xl bg-${colorClass}-50 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-${colorClass}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
+                        </div>
+                        <div class="truncate">
+                            <p class="text-[13px] font-bold text-gray-900 truncate">${f.nama_file}</p>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">${type} • ${(f.ukuran_bytes / 1024).toFixed(0)} KB</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function cleanup(type) {
+            const ids = lastScanResults[type].map(f => f.id);
+            if (ids.length === 0) return;
+
+            showConfirm(
+                'Konfirmasi Pembersihan',
+                `Hapus ${ids.length} record ${type} dari database? Tindakan ini permanen.`,
+                async () => {
+                    try {
+                        await API.post('/api/files/cleanup-bulk', { ids });
+                        Toast.success(`${ids.length} record telah dibersihkan.`);
+                        startScan(); // Rescan
+                    } catch (err) {
+                        Toast.error('Gagal membersihkan data.');
+                    }
+                }
+            );
+        }
+
+        async function cleanupAll() {
+            const ids = [...lastScanResults.duplicates, ...lastScanResults.ghosts, ...lastScanResults.candidates].map(f => f.id);
+            if (ids.length === 0) return;
+
+            showConfirm(
+                'Pembersihan Total',
+                `Sistem menyarankan menghapus ${ids.length} file. Lanjutkan pembersihan total secara permanen?`,
+                async () => {
+                    try {
+                        await API.post('/api/files/cleanup-bulk', { ids });
+                        Toast.success(`Audit Selesai. ${ids.length} record dibersihkan.`);
+                        startScan();
+                    } catch (err) {
+                        Toast.error('Gagal membersihkan data.');
+                    }
+                }
+            );
+        }
+    </script>
+</body>
+
+</html>

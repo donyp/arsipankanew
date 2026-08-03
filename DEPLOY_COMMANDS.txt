@@ -1,0 +1,156 @@
+================================================================================
+DEPLOYMENT COMMANDS - Pusat Arsip Anka v2.1 Fixed
+================================================================================
+
+🚀 READY TO DEPLOY TO HUGGING FACE SPACES
+
+The following changes have been made and are ready to deploy:
+✅ Fixed server startup hang (port binding error handling)
+✅ Added Alist file manager support (port 5244)
+✅ Improved startup logging and verification
+✅ All tests passing (27 tests passed, 0 failed)
+
+================================================================================
+STEP 1: Review Changes
+================================================================================
+
+# See what files have been modified
+git status
+
+# View the changes to key files
+git diff backend/server.js
+git diff start.sh
+git diff Dockerfile
+
+================================================================================
+STEP 2: Commit Changes
+================================================================================
+
+# Stage all changes
+git add .
+
+# Commit with a clear message
+git commit -m "Fix: Multi-port startup with error handling
+
+- Add comprehensive error handling to server startup
+- Support Alist file manager on port 5244
+- Improve startup logging and verification
+- Remove blocking 'set -e' from startup script
+- Expose both ports 7860 and 5244 in Docker
+- All tests passing: 27/27 ✅"
+
+================================================================================
+STEP 3: Push to Hugging Face Spaces
+================================================================================
+
+# Push to Hugging Face (if HF remote is already configured)
+git push -u hf main
+
+# OR if you need to set up the HF remote first:
+# git remote add hf https://huggingface.co/spaces/YOUR_USERNAME/pusat-arsip-anka
+# git push -u hf main
+
+================================================================================
+STEP 4: Monitor Deployment
+================================================================================
+
+# Watch the Hugging Face Spaces console for:
+1. Container transitioning from "building" → "starting" → "running"
+2. Logs showing:
+   - "PORT is set to: 7860"
+   - "Alist started with PID: XX on port 5244"
+   - "✅ Backend listening on port 7860"
+3. Health check succeeding
+4. Space URL becoming accessible
+
+Expected time: 3-5 minutes
+
+================================================================================
+STEP 5: Verify Deployment
+================================================================================
+
+Once deployed, test:
+
+1. Access the app:
+   https://YOUR_USERNAME-pusat-arsip-anka.hf.space
+
+2. Check logs in Hugging Face console
+
+3. Verify health endpoint (if you can access logs):
+   curl https://YOUR_USERNAME-pusat-arsip-anka.hf.space/api/heartbeat
+
+Expected response:
+   {"status":"alive","version":"2.0.1-fixed"}
+
+4. Try logging in with your credentials
+
+5. Test file upload functionality
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If deployment fails or app doesn't start:
+
+1. Check Hugging Face Space logs for errors
+2. Verify environment variables are set (SUPABASE_URL, JWT_SECRET, etc.)
+3. Look for error messages in the startup logs
+4. Check if port 7860 is available (error message will show if not)
+
+Common fixes:
+- Restart the Space (Settings > Restart this space)
+- Check Supabase credentials are correct
+- Ensure JWT_SECRET is set (generate new one if needed:
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+
+================================================================================
+VERIFICATION LOGS EXAMPLE
+================================================================================
+
+Expected startup logs:
+
+=========================================
+Starting Pusat Arsip Anka
+=========================================
+[INIT] PORT is set to: 7860
+[INIT] NODE_ENV is set to: production
+[INIT] Starting Alist service...
+[INIT] Alist started with PID: 12 on port 5244
+[INIT] ✅ Alist service confirmed running on port 5244
+[INIT] Starting Node.js backend server...
+⚠️  Node.js 18 and below are deprecated...
+================================================
+[BOOT] Pusat Arsip Anka - v2.1.0-fixed
+[BOOT] Time: 2026-06-22T07:48:12.568Z
+================================================
+🚀 Backend starting on port 7860
+✅ Backend listening on port 7860
+🚀 Pusat Arsip Anka Backend v2.1 running on http://localhost:7860
+   Auth: JWT (8h expiry)
+   Storage: Rclone (Terabox + Storj)
+   DB: Supabase PostgreSQL
+
+If you see all of the above, deployment is successful! ✅
+
+================================================================================
+REFERENCE
+================================================================================
+
+Modified Files:
+- backend/server.js        - Error handlers and logging
+- start.sh                 - Multi-port startup with verification
+- Dockerfile               - Port exposure configuration
+- backend/tests/*.test.js  - Test files (for verification only)
+
+Test Results:
+- Bug condition tests: 2 passed
+- Preservation tests: 25 passed
+- Total: 27 tests passed, 0 failed
+
+Documentation:
+- STARTUP_FIX_SUMMARY.md   - Detailed summary of changes
+- .kiro/specs/deployment-startup-hang-fix/  - Spec documents
+
+================================================================================
+READY FOR DEPLOYMENT! 🚀
+================================================================================

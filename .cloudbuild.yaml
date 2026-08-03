@@ -1,0 +1,82 @@
+# Google Cloud Build Configuration for Cloud Run
+# This file enables automatic deployment on every push to main branch
+
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/arsip-anka:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/arsip-anka:latest'
+      - '.'
+    
+  # Step 2: Push to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/arsip-anka:$SHORT_SHA'
+    
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gke-deploy'
+    id: 'deploy-cloudrun'
+    args:
+      - 'run'
+      - '--filename=.'
+      - '--image=gcr.io/$PROJECT_ID/arsip-anka:$SHORT_SHA'
+      - '--location=asia-southeast1'
+      - '--output=/workspace/out'
+  
+  # Alternative Step 3: Using gcloud directly (simpler)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy-cloudrun-direct'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'arsip-anka'
+      - '--image=gcr.io/$PROJECT_ID/arsip-anka:$SHORT_SHA'
+      - '--region=asia-southeast1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--timeout=300'
+      - '--port=8080'
+      - '--set-env-vars=NODE_ENV=production'
+      - '--set-secrets=SUPABASE_URL=arsip-supabase-url:latest'
+      - '--set-secrets=SUPABASE_SERVICE_ROLE_KEY=arsip-supabase-key:latest'
+      - '--set-secrets=JWT_SECRET=arsip-jwt-secret:latest'
+      - '--set-secrets=TERABOX_WEBDAV_URL=arsip-terabox-url:latest'
+      - '--set-secrets=TERABOX_USER=arsip-terabox-user:latest'
+      - '--set-secrets=TERABOX_PASS=arsip-terabox-pass:latest'
+      - '--set-secrets=TERABOX_CRYPT_PASSWORD=arsip-terabox-crypt:latest'
+    waitFor: ['push-image']
+
+# Configuration
+images:
+  - 'gcr.io/$PROJECT_ID/arsip-anka:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/arsip-anka:latest'
+
+# Build timeout (15 minutes)
+timeout: '900s'
+
+# Store build logs
+logsBucket: 'gs://${PROJECT_ID}_cloudbuild'
+
+# Substitutions
+substitutions:
+  _REGION: 'asia-southeast1'
+  _SERVICE_NAME: 'arsip-anka'
+
+# Options
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+  substitution_option: 'ALLOW_LOOSE'
+
+# Only build on push to main branch
+onPush:
+  branch: '^main$'

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Ads � Pusat Arsip Anka</title>
+    <meta name="description" content="Library media untuk tim Ads: footage, mentahan, poster, dan lainnya">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        // Strengthened Anti-Flash (FOUC) System v2.0
+        // Cloak the page until Auth and UI checks are done
+        document.documentElement.style.opacity = '0';
+        document.documentElement.classList.add('auth-loading');
+    </script>
+</head>
+
+<body class="bg-[#F0F2F5] min-h-screen text-gray-800">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <!-- Sidebar (rendered by js/sidebar.js?v=ULTRACLEAN_2026) -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 hidden">
+    </aside>
+
+    <!-- Main Content -->
+    <!-- Main Content (Default to 0 margin, will be set to ml-64 via JS if not admin_zona) -->
+    <main id="main-content" class="min-h-screen transition-all duration-300 pb-20">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-gray-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Media Ads</h2>
+                        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Library aset visual
+                            untuk tim marketing</p>
+                    </div>
+                </div>
+                <button onclick="openUploadModal()" data-permission="manage_media_ads"
+                    class="btn-primary px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Upload Media
+                </button>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <!-- Categories / Folders -->
+            <div id="media-categories" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <!-- Injected by JS -->
+                <div class="animate-pulse bg-white/5 h-24 rounded-2xl"></div>
+                <div class="animate-pulse bg-white/5 h-24 rounded-2xl delayed-1"></div>
+                <div class="animate-pulse bg-white/5 h-24 rounded-2xl delayed-2"></div>
+                <div class="animate-pulse bg-white/5 h-24 rounded-2xl delayed-3"></div>
+            </div>
+
+            <!-- Content Title / Stats -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h3 id="category-title" class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        Semua Media
+                    </h3>
+                    <p id="category-stats" class="text-xs text-gray-500">Memuat data...</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <div class="relative flex-1 sm:w-64">
+                        <input type="text" id="search-media" placeholder="Cari media..."
+                            class="input-field w-full pl-10 pr-4 py-2 rounded-xl text-sm" oninput="filterMedia()">
+                        <svg class="w-4 h-4 absolute left-3.5 top-3 text-gray-500" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Media Grid -->
+            <div id="media-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+                <!-- Injected by JS -->
+            </div>
+
+            <div id="media-empty" class="hidden py-20 text-center">
+                <svg class="w-12 h-12 text-gray-700 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p class="text-gray-500">Tidak ada media ditemukan.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Upload Media Modal -->
+    <div id="upload-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeUploadModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div
+                class="relative bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl animate-scale-in border border-gray-100">
+                <h3 class="text-xl font-extrabold text-gray-900 mb-6">Upload Media Ads</h3>
+                <form id="upload-form" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1.5">Pilih File</label>
+                        <input type="file" id="media-file" required
+                            class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-500/10 file:text-indigo-400 hover:file:bg-indigo-500/20 cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1.5">Kategori</label>
+                        <select id="media-category" required class="input-field w-full px-4 py-2.5 rounded-xl text-sm">
+                            <!-- Injected by JS -->
+                        </select>
+                    </div>
+
+                    <div id="upload-progress" class="hidden">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-gray-500">Mengupload...</span>
+                            <span id="progress-pct" class="text-xs font-bold text-indigo-400">0%</span>
+                        </div>
+                        <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-indigo-500 transition-all duration-300"
+                                style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="closeUploadModal()"
+                            class="btn-ghost flex-1 py-2.5 rounded-xl text-sm font-medium">Batal</button>
+                        <button type="submit" id="submit-upload"
+                            class="btn-primary flex-1 py-2.5 rounded-xl text-sm font-medium">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js?v=1778387279965"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ads-media.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>

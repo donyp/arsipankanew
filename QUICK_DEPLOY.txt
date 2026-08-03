@@ -1,0 +1,144 @@
+╔═══════════════════════════════════════════════════════════════╗
+║     PUSAT ARSIP ANKA - QUICK DEPLOYMENT REFERENCE CARD       ║
+╚═══════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────┐
+│ 1️⃣  CREATE SPACE
+└─────────────────────────────────────────────────────────────┘
+
+Go to: https://huggingface.co/spaces/create
+- Space name: pusat-arsip-anka
+- SDK: Docker
+- License: MIT (or your choice)
+- Visibility: Private/Public
+
+┌─────────────────────────────────────────────────────────────┐
+│ 2️⃣  CONFIGURE GIT (Local Machine)
+└─────────────────────────────────────────────────────────────┘
+
+cd "path\to\arsip anka"
+git config user.email "your@email.com"
+git config user.name "Your Name"
+git remote add hf https://huggingface.co/spaces/YOUR_USERNAME/pusat-arsip-anka
+
+┌─────────────────────────────────────────────────────────────┐
+│ 3️⃣  DEPLOY
+└─────────────────────────────────────────────────────────────┘
+
+git add .
+git commit -m "Deploy: Pusat Arsip Anka"
+git push -u hf main
+
+[Build starts automatically - takes 2-5 minutes]
+
+┌─────────────────────────────────────────────────────────────┐
+│ 4️⃣  SET ENVIRONMENT VARIABLES
+└─────────────────────────────────────────────────────────────┘
+
+Go to: Space Settings > Variables and Secrets
+
+Add these SECRETS:
+  SUPABASE_URL = https://xxxxx.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY = eyJhbGciOi...
+  JWT_SECRET = (generate: see below)
+
+Add these PUBLIC vars:
+  PORT = 7860
+  NODE_ENV = production
+
+┌─────────────────────────────────────────────────────────────┐
+│ 5️⃣  GENERATE JWT_SECRET
+└─────────────────────────────────────────────────────────────┘
+
+Run in terminal:
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+Copy the output and paste in HF Space settings as JWT_SECRET
+
+┌─────────────────────────────────────────────────────────────┐
+│ 6️⃣  MONITOR DEPLOYMENT
+└─────────────────────────────────────────────────────────────┘
+
+1. Go to Space page
+2. Click "App logs"
+3. Wait for "Running" status
+4. Look for: "[BOOT] Express server listening on port 7860"
+
+┌─────────────────────────────────────────────────────────────┐
+│ 7️⃣  ACCESS YOUR APP
+└─────────────────────────────────────────────────────────────┘
+
+URL: https://YOUR_USERNAME-pusat-arsip-anka.hf.space
+
+✅ App should load without errors
+✅ Login page should appear
+✅ Try logging in
+
+┌─────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING
+└─────────────────────────────────────────────────────────────┘
+
+Build Failed?
+  → Check .dockerignore - remove large files
+  → Verify Dockerfile syntax
+  → Check start.sh exists in repo root
+
+App Won't Start?
+  → Verify PORT=7860 in variables
+  → Check Space logs for errors
+  → Verify Supabase credentials
+
+500 Errors?
+  → Check JWT_SECRET is set
+  → Verify Supabase connection
+  → Check browser console (F12)
+
+┌─────────────────────────────────────────────────────────────┐
+│ IMPORTANT FILES
+└─────────────────────────────────────────────────────────────┘
+
+Dockerfile              → Container configuration
+start.sh               → Startup script
+.env.example           → Environment template
+SETUP_HUGGINGFACE.md   → Detailed setup guide
+DEPLOYMENT_CHECKLIST.md → Complete checklist
+deploy.sh              → Quick deploy script
+
+┌─────────────────────────────────────────────────────────────┐
+│ REQUIRED CREDENTIALS (Get from Supabase)
+└─────────────────────────────────────────────────────────────┘
+
+SUPABASE_URL
+  → In Supabase Dashboard > Project Settings > API
+
+SUPABASE_SERVICE_ROLE_KEY
+  → In Supabase Dashboard > Project Settings > API > Service Role
+
+JWT_SECRET
+  → Generate new: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+┌─────────────────────────────────────────────────────────────┐
+│ SUPPORT & RESOURCES
+└─────────────────────────────────────────────────────────────┘
+
+Hugging Face Spaces: https://huggingface.co/docs/hub/spaces
+Docker Docs:         https://docs.docker.com/
+Supabase:           https://supabase.com/docs
+Node.js:            https://nodejs.org/
+
+┌─────────────────────────────────────────────────────────────┐
+│ AFTER DEPLOYMENT
+└─────────────────────────────────────────────────────────────┘
+
+✅ Share Space URL with team
+✅ Test all features (login, upload, download)
+✅ Monitor logs regularly
+✅ Setup database backups (Supabase does auto-backup)
+✅ Document access procedures
+
+═════════════════════════════════════════════════════════════════
+
+For detailed instructions, see: DEPLOYMENT_SUMMARY.md
+For troubleshooting, see: DEPLOYMENT_CHECKLIST.md
+
+Ready to deploy? 🚀 Follow the 7 steps above!

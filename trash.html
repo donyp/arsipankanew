@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tong Sampah | Pusat Arsip Anka</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        // Cloak the page until Auth and UI checks are done
+        document.documentElement.style.opacity = '0';
+        document.documentElement.classList.add('auth-loading');
+    </script>
+</head>
+
+<body class="bg-[#F0F2F5] min-h-screen text-gray-800">
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar (rendered by js/sidebar.js?v=ULTRACLEAN_2026) -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 hidden">
+    </aside>
+
+    <!-- Main Content (Default to 0 margin, will be set to ml-64 via JS if not admin_zona) -->
+    <main id="main-content" class="min-h-screen transition-all duration-300">
+        <header
+            class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Tong Sampah (Trash)</h2>
+                <p class="text-[11px] font-bold text-red-600 uppercase tracking-tight">Hati-hati: Penghapusan di sini
+                    bersifat permanen!</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="bulk-delete-btn" onclick="deleteSelectedFiles()"
+                    class="hidden px-4 py-2 rounded-xl text-xs bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 whitespace-nowrap">
+                    Hapus Terpilih (<span id="selected-count-old">0</span>)
+                </button>
+                <button onclick="emptyTrash()" data-permission="hard_delete"
+                    class="btn-ghost px-4 py-2 rounded-xl text-[10px] font-bold text-red-500 uppercase tracking-widest hover:bg-red-50 border border-red-200 whitespace-nowrap transition-all">
+                    Kosongkan Sampah
+                </button>
+            </div>
+        </header>
+
+        <!-- Toolbar Section -->
+        <div class="px-6 pt-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="relative group w-full max-w-md">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-gray-400 group-focus-within:text-red-500 transition-colors" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input type="text" id="trash-search" oninput="searchTrash(this.value)"
+                        placeholder="Cari nama file, kategori, atau penyunting..."
+                        class="block w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-red-100 focus:border-red-400 transition-all shadow-sm">
+                </div>
+                <div class="text-xs text-gray-500 italic px-2">
+                    Menampilkan <span id="trash-count">0</span> file terhapus
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-white rounded-[2rem] p-4 shadow-xl shadow-blue-500/5 border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="trash-table">
+                        <thead>
+                            <tr
+                                class="text-gray-500 text-[10px] font-bold uppercase tracking-widest border-b border-gray-50">
+                                <th class="pl-6 py-5 w-10">
+                                    <input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"
+                                        class="w-4 h-4 rounded border-gray-200 bg-gray-50 text-red-600 focus:ring-red-500 transition-all">
+                                </th>
+                                <th class="py-5">Nama File</th>
+                                <th class="py-5">Kategori</th>
+                                <th class="py-5">Dihapus Oleh</th>
+                                <th class="py-5">Tanggal Hapus</th>
+                                <th class="pr-6 py-5 text-right font-bold text-gray-900">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trash-body" class="divide-y divide-gray-50 text-sm">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="empty-state" class="empty-state hidden py-20 text-center">
+                    <svg class="w-12 h-12 text-gray-200 mx-auto mb-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <p class="text-gray-400 font-medium">Tong sampah bersih.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bulk Action Bar -->
+    <div id="bulk-action-bar" class="bulk-floating-bar fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
+        <div
+            class="bulk-inner bg-white/90 backdrop-blur-xl border border-gray-200 rounded-[2rem] shadow-2xl p-2.5 flex items-center gap-4 animate-slide-up">
+            <div class="flex items-center gap-3 px-5 border-r border-gray-100">
+                <div class="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center text-sm font-black shadow-lg shadow-red-200"
+                    id="selected-count">0</div>
+                <span class="text-xs font-bold text-gray-900 uppercase tracking-widest">Aset Terpilih</span>
+            </div>
+            <div class="flex items-center gap-3 p-1">
+                <button id="btn-bulk-restore" onclick="bulkRestoreSelected()"
+                    class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-emerald-200 active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Pulihkan
+                </button>
+                <button id="btn-bulk-hard-delete" onclick="bulkDeleteSelected()"
+                    class="px-6 py-3 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-2xl text-sm font-bold border border-red-100 hover:border-red-600 flex items-center gap-2 transition-all group active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Hapus Permanen
+                </button>
+                <button onclick="clearSelection()"
+                    class="px-4 py-2.5 text-gray-500 hover:text-gray-700 text-xs font-bold uppercase tracking-widest transition-colors">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js?v=1778387279965"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/trash.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>

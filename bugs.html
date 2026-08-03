@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Bug | Pusat Arsip Anka</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        document.documentElement.style.opacity = '0';
+        document.documentElement.classList.add('auth-loading');
+    </script>
+</head>
+
+<body class="bg-[#F8FAFC] min-h-screen text-gray-800">
+
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-100 flex flex-col z-40 hidden">
+    </aside>
+
+    <main id="main-content" class="ml-64 min-h-screen transition-all duration-300">
+        <header class="sticky top-0 z-[45] bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-2.5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()"
+                        class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <h1 class="text-sm font-black text-gray-900 uppercase tracking-tight">Laporan Bug</h1>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="h-6 w-px bg-gray-100 mx-1"></div>
+
+                    <!-- User Profile Card -->
+                    <div id="user-profile-dropdown-container" class="relative">
+                        <button onclick="toggleUserMenu()"
+                            class="flex items-center gap-2 p-1 pr-2 rounded-full hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100">
+                            <div
+                                class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-[9px] font-black text-white uppercase shadow-lg shadow-blue-200">
+                                <span data-user-name-initials>A</span>
+                            </div>
+                            <div class="text-left hidden lg:block">
+                                <p class="text-[10px] font-black text-gray-900 leading-none" data-user-name>User</p>
+                            </div>
+                            <svg class="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <!-- Profile Dropdown Menu -->
+                        <div id="user-menu"
+                            class="absolute right-0 mt-3 w-52 bg-white border border-gray-100 rounded-2xl shadow-2xl transition-all opacity-0 invisible translate-y-2 py-2 z-50">
+                            <button onclick="openProfileDetail()"
+                                class="flex items-center gap-3 w-full px-4 py-3 text-xs font-bold text-gray-600 hover:text-blue-600 hover:bg-blue-50/50 transition-all text-left">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Profil Detail
+                            </button>
+                            <div class="h-px bg-gray-50 my-1 mx-2"></div>
+                            <button onclick="logout()"
+                                class="flex items-center gap-3 w-full px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50/50 transition-all text-left">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto space-y-6">
+
+                <!-- Header Card -->
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-gray-900 tracking-tight">Laporan Bug</h2>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Kelola dan tindak
+                            lanjuti laporan masalah dari Admin Zona</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <select id="filter-status" onchange="loadBugs()"
+                            class="bg-white border border-gray-100 rounded-2xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500 outline-none focus:ring-2 focus:ring-amber-200 appearance-none cursor-pointer">
+                            <option value="all">Semua Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Diproses">Diproses</option>
+                            <option value="Selesai">Selesai</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Laporan</p>
+                        <p id="stat-total" class="text-2xl font-black text-gray-900 mt-1">0</p>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-amber-100 p-5">
+                        <p class="text-[9px] font-black text-amber-500 uppercase tracking-widest">Pending</p>
+                        <p id="stat-pending" class="text-2xl font-black text-amber-600 mt-1">0</p>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-blue-100 p-5">
+                        <p class="text-[9px] font-black text-blue-500 uppercase tracking-widest">Diproses</p>
+                        <p id="stat-diproses" class="text-2xl font-black text-blue-600 mt-1">0</p>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-emerald-100 p-5">
+                        <p class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Selesai</p>
+                        <p id="stat-selesai" class="text-2xl font-black text-emerald-600 mt-1">0</p>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr
+                                class="border-b border-gray-100 bg-gray-50/50 text-[10px] uppercase font-bold tracking-widest text-gray-400">
+                                <th class="pl-8 py-5 font-bold w-[12%] text-left">Tanggal</th>
+                                <th class="py-5 font-bold w-[12%] text-left">Pelapor</th>
+                                <th class="py-5 font-bold w-[15%] text-left">Tipe Bug</th>
+                                <th class="py-5 font-bold w-[8%] text-left">Level</th>
+                                <th class="py-5 font-bold w-[25%] text-left">Deskripsi</th>
+                                <th class="py-5 font-bold w-[10%] text-center">Bukti</th>
+                                <th class="py-5 font-bold w-[10%] text-left">Status</th>
+                                <th class="pr-8 py-5 font-bold w-[13%] text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bugs-table-body" class="text-sm divide-y divide-gray-50">
+                            <tr>
+                                <td colspan="8" class="text-center py-16">
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Memuat
+                                        data...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Lightbox Modal -->
+    <div id="image-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeImageModal()"></div>
+        <div class="absolute inset-4 md:inset-10 flex flex-col items-center justify-center pointer-events-none">
+            <div class="relative max-w-5xl w-full h-full flex flex-col pointer-events-auto">
+                <button onclick="closeImageModal()"
+                    class="absolute -top-12 right-0 p-3 text-white/50 hover:text-white transition-colors">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <div class="bg-white rounded-3xl overflow-hidden shadow-2xl flex-1 flex flex-col relative group">
+                    <div id="image-modal-loader"
+                        class="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                        <div class="loader-ring"></div>
+                    </div>
+                    <img id="image-modal-img"
+                        class="w-full h-full object-contain bg-gray-900 opacity-0 transition-opacity duration-300"
+                        onload="document.getElementById('image-modal-loader').classList.add('hidden'); this.classList.remove('opacity-0')">
+                    <div
+                        class="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a id="image-modal-download" href="#" target="_blank"
+                            class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all shadow-xl">Unduh
+                            Gambar Asli</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js?v=1778387279965"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let allBugs = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Initialize Auth and Role Guard
+                const user = await initAuth('moderator'); // super_admin or moderator
+                if (!user) return; // initAuth handles redirect
+
+                await loadBugs();
+            } catch (err) {
+                console.error('Init Error:', err);
+                Toast.error('Gagal inisialisasi halaman: ' + err.message);
+            }
+        });
+
+        async function loadBugs() {
+            const tbody = document.getElementById('bugs-table-body');
+            try {
+                const res = await API.get('/api/bugs');
+                allBugs = res.reports || [];
+
+                // Filter by status
+                const statusFilter = document.getElementById('filter-status')?.value || 'all';
+                let filtered = allBugs;
+                if (statusFilter !== 'all') {
+                    filtered = allBugs.filter(b => b.status === statusFilter);
+                }
+
+                // Stats
+                document.getElementById('stat-total').textContent = allBugs.length;
+                document.getElementById('stat-pending').textContent = allBugs.filter(b => b.status === 'Pending').length;
+                document.getElementById('stat-diproses').textContent = allBugs.filter(b => b.status === 'Diproses').length;
+                document.getElementById('stat-selesai').textContent = allBugs.filter(b => b.status === 'Selesai').length;
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16"><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Belum ada laporan bug</p></td></tr>`;
+                    return;
+                }
+
+                const isAdmin = isSuperAdmin();
+
+                tbody.innerHTML = filtered.map((b, i) => {
+                    const d = new Date(b.created_at);
+                    const dateStr = d.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+                    const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+                    let levelBadge = '';
+                    if (b.level === 'Tinggi') levelBadge = '<span class="px-2.5 py-1 rounded-lg text-[9px] bg-red-50 text-red-600 border border-red-100 font-black tracking-[0.1em] uppercase">Tinggi</span>';
+                    else if (b.level === 'Medium') levelBadge = '<span class="px-2.5 py-1 rounded-lg text-[9px] bg-amber-50 text-amber-600 border border-amber-100 font-black tracking-[0.1em] uppercase">Medium</span>';
+                    else levelBadge = '<span class="px-2.5 py-1 rounded-lg text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 font-black tracking-[0.1em] uppercase">Rendah</span>';
+
+                    let statusBadge = '';
+                    if (b.status === 'Pending') statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[9px] bg-amber-50 text-amber-600 border border-amber-100 font-black tracking-[0.1em] uppercase">Pending</span>';
+                    else if (b.status === 'Diproses') statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[9px] bg-blue-50 text-blue-600 border border-blue-100 font-black tracking-[0.1em] uppercase">Diproses</span>';
+                    else if (b.status === 'Selesai') statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 font-black tracking-[0.1em] uppercase">Selesai</span>';
+                    else statusBadge = '<span class="px-2.5 py-1 rounded-lg text-[9px] bg-gray-50 text-gray-500 border border-gray-100 font-black tracking-[0.1em] uppercase">' + b.status + '</span>';
+
+                    return `
+                    <tr class="animate-fade-in border-b border-gray-50 hover:bg-gray-50/50 transition-colors" style="animation-delay: ${i * 30}ms">
+                        <td class="pl-8 py-5 align-top">
+                            <p class="text-xs font-black text-gray-900">${dateStr}</p>
+                            <p class="text-[10px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider">${timeStr} WIB</p>
+                        </td>
+                        <td class="py-5 align-top">
+                            <p class="font-black text-gray-900 text-xs">${b.users?.name || 'Unknown'}</p>
+                            <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">${b.zonas?.nama || '-'}</p>
+                        </td>
+                        <td class="py-5 align-top">
+                            <p class="text-xs font-bold text-gray-900">${b.tipe}</p>
+                        </td>
+                        <td class="py-5 align-top">${levelBadge}</td>
+                        <td class="py-5 align-top">
+                            <div class="text-xs text-gray-500 leading-relaxed font-medium max-w-sm">
+                                ${b.deskripsi.replace(/\n/g, '<br>')}
+                                ${b.admin_notes ? `<div class="mt-2 p-3 bg-blue-50 rounded-xl border border-blue-100 text-[10px] text-blue-600 font-bold leading-relaxed"><b>Catatan Admin:</b> ${b.admin_notes}</div>` : ''}
+                            </div>
+                        </td>
+                        <td class="py-5 align-top text-center">
+                            ${b.tautan_file ? `
+                                <div class="inline-flex flex-col items-center gap-1 group/img cursor-pointer" onclick="openImageModal('${API.getAuthenticatedUrl(b.tautan_file)}')">
+                                    <div class="relative">
+                                        <img src="${API.getAuthenticatedUrl(b.tautan_file)}" class="w-12 h-12 object-cover rounded-xl border border-gray-100 group-hover/img:brightness-75 transition-all">
+                                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                                        </div>
+                                    </div>
+                                    <span class="text-[9px] font-black text-blue-500 uppercase tracking-widest opacity-60 group-hover/img:opacity-100 transition-opacity">Lihat Lampiran</span>
+                                </div>
+                            ` : `<span class="text-[10px] font-black text-gray-200 uppercase tracking-widest">No Bukti</span>`}
+                        </td>
+                        <td class="py-5 align-top">${statusBadge}</td>
+                        <td class="pr-8 py-5 align-top text-right">
+                            ${isAdmin ? `
+                                <div class="flex items-center justify-end gap-2">
+                                    ${b.tautan_file ? `
+                                        <button onclick="openImageModal('${API.getAuthenticatedUrl(b.tautan_file)}')" class="p-2.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95" title="Lihat Bukti Foto">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        </button>
+                                    ` : ''}
+                                    ${b.status === 'Pending' ? `
+                                        <button onclick="updateBugStatus(${b.id}, 'Diproses')" class="p-2.5 rounded-xl bg-white border border-gray-100 text-amber-600 hover:bg-amber-600 hover:text-white transition-all shadow-sm active:scale-95" title="Tandai Diproses">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                        </button>
+                                    ` : ''}
+                                    ${b.status === 'Diproses' || b.status === 'Pending' ? `
+                                        <button onclick="updateBugStatus(${b.id}, 'Selesai')" class="p-2.5 rounded-xl bg-white border border-gray-100 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm active:scale-95" title="Tandai Selesai">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="deleteBug(${b.id})" class="p-2.5 rounded-xl bg-white border border-gray-100 text-gray-400 hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95" title="Hapus">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                            ` : '<span class="text-gray-300 font-black text-[10px]">---</span>'}
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (err) {
+                console.error('Load Bugs Error:', err);
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16"><p class="text-xs font-bold text-red-500">Gagal memuat laporan bug: ${err.message}</p></td></tr>`;
+            }
+        }
+
+        async function updateBugStatus(id, status) {
+            try {
+                await API.put(`/api/bugs/${id}`, { status });
+                Toast.success(`Status laporan diubah menjadi "${status}".`);
+                await loadBugs();
+            } catch (err) {
+                Toast.error('Gagal mengubah status: ' + err.message);
+            }
+        }
+
+        async function deleteBug(id) {
+            showConfirm(
+                'Hapus Laporan',
+                'Apakah Anda yakin ingin menghapus laporan bug ini secara permanen?',
+                async () => {
+                    try {
+                        await API.del(`/api/bugs/${id}`);
+                        Toast.success('Laporan bug berhasil dihapus.');
+                        await loadBugs();
+                    } catch (err) {
+                        Toast.error('Gagal menghapus: ' + err.message);
+                    }
+                },
+                'Hapus'
+            );
+        }
+
+        function openImageModal(url) {
+            const modal = document.getElementById('image-modal');
+            const img = document.getElementById('image-modal-img');
+            const dl = document.getElementById('image-modal-download');
+            const loader = document.getElementById('image-modal-loader');
+
+            loader.classList.remove('hidden');
+            img.classList.add('opacity-0');
+            img.src = url;
+            dl.href = url;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,113 @@
+=================================================================
+GOOGLE CLOUD RUN - QUICK START COMMANDS (Copy & Paste)
+=================================================================
+
+# STEP 1: Login & Set Project
+gcloud auth login
+$PROJECT_ID = "YOUR_PROJECT_ID"
+gcloud config set project $PROJECT_ID
+
+# STEP 2: Enable APIs
+gcloud services enable run.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+gcloud services enable artifactregistry.googleapis.com
+gcloud services enable secretmanager.googleapis.com
+
+# STEP 3: Create Secrets (Replace values with your actual values)
+echo "https://ehdqcxzdmmcw..." | gcloud secrets create arsip-supabase-url --data-file=-
+echo "eyJhbGciOiJIUzI1NiIs..." | gcloud secrets create arsip-supabase-key --data-file=-
+echo "arsip-digital-super-..." | gcloud secrets create arsip-jwt-secret --data-file=-
+
+# STEP 4: Deploy to Cloud Run (First time - from local directory)
+gcloud run deploy arsip-anka `
+  --source=. `
+  --platform managed `
+  --region asia-southeast1 `
+  --allow-unauthenticated `
+  --memory 512Mi `
+  --cpu 1 `
+  --timeout 300 `
+  --port 8080 `
+  --set-env-vars NODE_ENV=production `
+  --set-secrets SUPABASE_URL=arsip-supabase-url:latest `
+  --set-secrets SUPABASE_SERVICE_ROLE_KEY=arsip-supabase-key:latest `
+  --set-secrets JWT_SECRET=arsip-jwt-secret:latest
+
+# STEP 5: Get Service URL
+$SERVICE_URL = (gcloud run services describe arsip-anka --region asia-southeast1 --format='value(status.url)')
+Write-Host "Service deployed at: $SERVICE_URL"
+
+# STEP 6: Test Health Check
+curl "$SERVICE_URL/api/heartbeat"
+
+# STEP 7: View Logs
+gcloud run services logs read arsip-anka --region asia-southeast1 --limit 50
+
+# STEP 8: View Real-time Logs
+gcloud run services logs read arsip-anka --region asia-southeast1 --follow
+
+=================================================================
+IMPORTANT NOTES:
+=================================================================
+
+1. Replace YOUR_PROJECT_ID with your actual GCP project ID
+   Example: gcloud config set project my-arsip-project
+
+2. Replace secret values with your ACTUAL values:
+   - SUPABASE_URL: dari .env atau Supabase dashboard
+   - SUPABASE_SERVICE_ROLE_KEY: dari Supabase settings
+   - JWT_SECRET: sama seperti yang digunakan saat ini
+
+3. asia-southeast1 region dipilih untuk latency rendah ke Indonesia
+   Regions lainnya: us-central1, europe-west1, asia-east1
+
+4. Memory/CPU settings:
+   - 512Mi memory + 1 CPU = standard
+   - Untuk high traffic: ubah menjadi 1Gi + 2 CPU
+   - Untuk low traffic: ubah menjadi 256Mi + 0.25 CPU
+
+5. Setelah deployment berhasil:
+   - Cloud Run automatically handles scaling
+   - Service URL: https://arsip-anka-XXX-aj.a.run.app
+   - Gratis untuk ~2 juta requests/bulan
+
+=================================================================
+ONGOING DEPLOYMENTS (After Initial Setup):
+=================================================================
+
+# Option 1: Push ke GitHub, Cloud Run auto-deploy dari repo
+git push origin main
+# (Cloud Build akan trigger otomatis)
+
+# Option 2: Manual deploy dari local
+gcloud run deploy arsip-anka --source=. --region asia-southeast1
+
+# Option 3: Deploy dari container image yang sudah dibuild
+gcloud run deploy arsip-anka \
+  --image gcr.io/YOUR_PROJECT_ID/arsip-anka \
+  --region asia-southeast1
+
+=================================================================
+TROUBLESHOOTING:
+=================================================================
+
+# View deployment details
+gcloud run services describe arsip-anka --region asia-southeast1
+
+# View build logs
+gcloud builds list --limit 10
+gcloud builds log BUILD_ID
+
+# Check secret access
+gcloud secrets list
+
+# Update secrets
+echo "new-value" | gcloud secrets versions add arsip-jwt-secret --data-file=-
+
+# Delete service
+gcloud run services delete arsip-anka --region asia-southeast1
+
+# Rollback to previous revision
+gcloud run services update-traffic arsip-anka --region asia-southeast1 --to-revisions=REVISION_ID=100
+
+=================================================================

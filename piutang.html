@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bukti Pembayaran Piutang | Pusat Arsip Anka</title>
+    <meta name="description" content="Upload bukti pembayaran piutang secara massal">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        // Cloak the page until Auth and UI checks are done
+        document.documentElement.style.opacity = '0';
+        document.documentElement.classList.add('auth-loading');
+    </script>
+</head>
+
+<body class="bg-[#F0F2F5] min-h-screen text-gray-800">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <!-- Sidebar (rendered by js/sidebar.js?v=ULTRACLEAN_2026) -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 hidden">
+    </aside>
+
+    <!-- Main Content -->
+    <!-- Main Content (Default to 0 margin, will be set to ml-64 via JS if not admin_zona) -->
+    <main id="main-content" class="min-h-screen transition-all duration-300">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-gray-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Bukti Pembayaran Piutang</h2>
+                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Upload bukti pembayaran
+                        piutang secara massal</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <div class="max-w-3xl mx-auto space-y-6">
+
+                <!-- Info Banner -->
+                <div
+                    class="flex items-start gap-4 p-5 rounded-2xl bg-blue-50 border border-blue-100 animate-fade-in-up">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-extrabold text-blue-900 uppercase tracking-tight">Upload Massal Bukti
+                            Piutang</p>
+                        <p class="text-xs text-blue-600 font-medium mt-1 leading-relaxed">Pilih satu atau lebih file
+                            bukti pembayaran. File akan diupload secara otomatis ke kategori dan folder piutang.</p>
+                    </div>
+                </div>
+
+                <!-- Upload Form Card -->
+                <div
+                    class="bg-white rounded-[2rem] p-8 shadow-xl shadow-blue-500/5 border border-gray-100 animate-fade-in-up">
+                    <form id="piutang-form" class="space-y-6">
+
+                        <!-- Hidden category -->
+                        <input type="hidden" id="piutang-category" value="PIUTANG">
+
+                        <!-- Drag & Drop Zone -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3 px-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase tracking-widest">Berkas Bukti
+                                    Pembayaran</label>
+                                <span class="text-[10px] text-gray-600 font-medium tracking-tight">Maks 25MB •
+                                    PDF/JPG/PNG</span>
+                            </div>
+                            <div id="drop-zone"
+                                class="drop-zone rounded-[2rem] p-16 text-center cursor-pointer border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300"
+                                onclick="document.getElementById('piutang-file-input').click()">
+                                <div id="drop-zone-content">
+                                    <div
+                                        class="w-20 h-20 bg-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-200">
+                                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                    </div>
+                                    <p class="text-base text-gray-900 mb-1 font-bold">Klik atau seret bukti pembayaran
+                                        ke sini</p>
+                                    <p class="text-xs text-gray-400 font-medium">Auto-upload massal didukung.</p>
+                                </div>
+                                <div id="file-info" class="hidden text-left w-full">
+                                    <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            <p class="text-xs font-bold text-gray-700 uppercase tracking-wider">Antrian
+                                                Berkas</p>
+                                        </div>
+                                        <button type="button" onclick="clearFiles(event)"
+                                            class="text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 px-2.5 py-1 rounded-md transition-colors uppercase tracking-tight">Bersihkan
+                                            Semua</button>
+                                    </div>
+                                    <ul id="file-list-display"
+                                        class="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                        <!-- Files injected here -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input id="piutang-file-input" type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
+                                multiple onchange="handlePiutangFileSelect(this)">
+                        </div>
+
+                        <!-- Tanggal Row -->
+                        <div class="max-w-xs">
+                            <label
+                                class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 ml-1">Tanggal
+                                Pembayaran</label>
+                            <input id="piutang-date" type="date" required
+                                class="w-full px-4 py-3.5 bg-gray-50 border border-transparent rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:bg-white focus:border-emerald-400 transition-all">
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div id="piutang-progress-container"
+                            class="hidden space-y-3 bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="loader-mini w-4 h-4 text-emerald-500"></div>
+                                    <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Sedang
+                                        Mengupload...</span>
+                                </div>
+                                <span id="piutang-progress-pct"
+                                    class="text-sm font-bold text-emerald-600 tracking-widest">0%</span>
+                            </div>
+                            <div class="progress-bar bg-gray-100 h-2">
+                                <div id="piutang-progress-bar" class="progress-bar-fill bg-emerald-500 h-2"
+                                    style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button id="piutang-btn" type="submit"
+                            class="w-full py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xl shadow-emerald-600/20 active:scale-95">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            Upload Bukti Piutang
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Recent Uploads -->
+                <div class="glass-card rounded-[2rem] p-8 animate-fade-in-up border border-white/5">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-widest">Upload Piutang Terbaru
+                            </h3>
+                        </div>
+                    </div>
+                    <div id="piutang-recent" class="space-y-3">
+                        <p class="text-sm font-medium text-gray-400 text-center py-10 italic">Belum ada riwayat upload
+                            hari ini.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js?v=1778387279965"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let currentUserData = null;
+        let selectedPiutangFiles = [];
+        window._allTokos = [];
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar) sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await initAuth();
+            if (!user) return;
+
+            // Allow super_admin, moderator, and admin_zona
+            const allowedRoles = ['super_admin', 'moderator', 'admin_zona'];
+            if (!allowedRoles.includes(user.role)) {
+                Toast.error('Anda tidak memiliki akses ke halaman ini.');
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
+                return;
+            }
+            currentUserData = user;
+
+            // Load stores for selection
+            try {
+                const { toko } = await API.get('/api/toko');
+                window._allTokos = toko || [];
+            } catch (err) { console.warn('Gagal memuat toko:', err); }
+
+            // Default date = today
+            const today = new Date();
+            const offset = today.getTimezoneOffset();
+            const localDate = new Date(today.getTime() - (offset * 60 * 1000));
+            const todayStr = localDate.toISOString().split('T')[0];
+            const dateInput = document.getElementById('piutang-date');
+            if (dateInput) dateInput.value = todayStr;
+
+            setupPiutangDragDrop();
+            setupPiutangForm();
+            loadRecentPiutang();
+        });
+
+        function getEffectiveZonaId() {
+            if (currentUserData && currentUserData.role === 'admin_zona') {
+                return currentUserData.zona_id;
+            }
+            return 1;
+        }
+
+        function setupPiutangDragDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            if (!dropZone) return;
+
+            ['dragenter', 'dragover'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-emerald-500', 'bg-emerald-500/5');
+                });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-emerald-500', 'bg-emerald-500/5');
+                });
+            });
+            dropZone.addEventListener('drop', (e) => {
+                addPiutangFiles(e.dataTransfer.files);
+            });
+        }
+
+        function handlePiutangFileSelect(input) {
+            if (input.files.length > 0) addPiutangFiles(input.files);
+        }
+
+        function toLocalYYYYMMDD(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function addPiutangFiles(files) {
+            const months = {
+                'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mei': 4, 'jun': 5,
+                'jul': 6, 'agu': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11,
+                'januari': 0, 'februari': 1, 'maret': 2, 'april': 3, 'mei': 4, 'juni': 5,
+                'juli': 6, 'agustus': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11,
+                'may': 4, 'aug': 7, 'oct': 9, 'dec': 11
+            };
+
+            const newFiles = Array.from(files).filter(f => {
+                if (selectedPiutangFiles.some(sf => sf.file.name === f.name)) {
+                    Toast.warning(`"${f.name}" sudah ada dalam antrian.`);
+                    return false;
+                }
+                return true;
+            }).map(f => {
+                const cleanName = f.name.replace(/\.[^/.]+$/, "");
+
+                // 1. Nominal
+                let nominal = 0;
+                const nominalMatch = cleanName.match(/(\d{1,3}(\.\d{3})+)/);
+                if (nominalMatch) {
+                    nominal = parseInt(nominalMatch[0].replace(/\./g, ''));
+                }
+
+                // 2. Date
+                let date = document.getElementById('piutang-date')?.value || toLocalYYYYMMDD(new Date());
+                let isDateDetected = false;
+                const dateMatch = cleanName.match(/\b(\d{1,2})\s+([a-zA-Z]{3,})\b/i);
+                if (dateMatch) {
+                    const dNum = parseInt(dateMatch[1]);
+                    const mName = dateMatch[2].toLowerCase();
+                    let mIdx = -1;
+                    if (months[mName] !== undefined) mIdx = months[mName];
+                    else {
+                        const pref = mName.substring(0, 3);
+                        if (months[pref] !== undefined) mIdx = months[pref];
+                    }
+                    if (mIdx !== -1) {
+                        const dObj = new Date(new Date().getFullYear(), mIdx, dNum);
+                        date = toLocalYYYYMMDD(dObj);
+                        isDateDetected = true;
+                    }
+                }
+
+                return { file: f, nominal, date, isDateDetected, isDuplicate: false };
+            });
+
+            const startIndex = selectedPiutangFiles.length;
+            selectedPiutangFiles = [...selectedPiutangFiles, ...newFiles];
+            updatePiutangFileUI();
+
+            // Trigger background duplicate check (with user zone fallback)
+            const targetZona = getEffectiveZonaId();
+            newFiles.forEach((item) => {
+                checkPiutangBackgroundDuplicate(item.file.name, targetZona);
+            });
+        }
+
+        async function checkPiutangBackgroundDuplicate(filename, zonaId) {
+            try {
+                const res = await API.get(`/api/files/check-duplicate?name=${encodeURIComponent(filename)}&zona_id=${zonaId}`);
+                if (res && res.exists) {
+                    const fileIndex = selectedPiutangFiles.findIndex(f => f.file.name === filename);
+                    if (fileIndex !== -1) {
+                        selectedPiutangFiles[fileIndex].isDuplicate = true;
+                        updatePiutangFileUI();
+                    }
+                }
+            } catch (err) {
+                console.error('Duplicate check error:', err);
+            }
+        }
+
+        function removePiutangFile(index, e) {
+            e.stopPropagation();
+            selectedPiutangFiles.splice(index, 1);
+            updatePiutangFileUI();
+        }
+
+        function clearFiles(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            selectedPiutangFiles = [];
+            updatePiutangFileUI();
+        }
+
+        function setPiutangFileDate(index, val) {
+            selectedPiutangFiles[index].date = val;
+            selectedPiutangFiles[index].isDateDetected = false;
+            updatePiutangFileUI();
+        }
+
+        function unlockPiutangDate(index) {
+            selectedPiutangFiles[index].isDateDetected = false;
+            updatePiutangFileUI();
+        }
+
+        function updatePiutangFileUI() {
+            const listDisplay = document.getElementById('file-list-display');
+            const fileInfo = document.getElementById('file-info');
+            const dropZoneContent = document.getElementById('drop-zone-content');
+            const submitBtn = document.getElementById('piutang-btn');
+
+            if (selectedPiutangFiles.length === 0) {
+                fileInfo.classList.add('hidden');
+                dropZoneContent.classList.remove('hidden');
+                if (submitBtn) submitBtn.disabled = true;
+                return;
+            }
+
+            fileInfo.classList.remove('hidden');
+            dropZoneContent.classList.add('hidden');
+            if (submitBtn) submitBtn.disabled = false;
+
+            listDisplay.innerHTML = selectedPiutangFiles.map((item, i) => {
+                let displayDate = item.date;
+                try {
+                    const dateParts = item.date.split('-');
+                    const d = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+                    displayDate = `${parseInt(dateParts[2])} ${monthNames[d.getMonth()]}`;
+                } catch (e) { }
+
+                return `
+                <li class="flex items-center justify-between px-5 py-4 rounded-[1.25rem] bg-gray-50 border border-gray-100 group transition-all hover:bg-white hover:border-emerald-200 shadow-sm">
+                    <div class="flex items-center gap-4 overflow-hidden flex-1">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-all border border-emerald-500/10">
+                            <svg class="w-5 h-5 text-emerald-500 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 002-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 1 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <div class="truncate flex-1">
+                            <p class="text-[13px] font-bold text-gray-900 truncate mb-1.5 uppercase">${item.file.name}</p>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-none">${formatPiutangSize(item.file.size)}</p>
+                                
+                                <div class="flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 text-emerald-700 font-extrabold text-[10px] shadow-sm">
+                                    <span class="tracking-widest">${item.nominal > 0 ? formatCurrency(item.nominal) : 'RP 0'}</span>
+                                </div>
+
+                                <!-- Duplicate Warning Badge -->
+                                ${item.isDuplicate ? `
+                                    <div class="flex items-center gap-1.5 bg-red-50 text-red-600 px-2 py-0.5 rounded-lg border border-red-100 shadow-sm animate-fade-in">
+                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/></svg>
+                                        <span class="text-[10px] font-black uppercase tracking-widest">File Sudah Ada</span>
+                                    </div>
+                                ` : ''}
+
+                                <!-- Date Badge (Amber Locked Style) -->
+                                ${item.isDateDetected ? `
+                                    <div onclick="unlockPiutangDate(${i})" class="flex items-center gap-1.5 bg-amber-50 text-amber-600 px-2 py-0.5 rounded-lg border border-amber-100 shadow-sm animate-fade-in cursor-pointer hover:bg-amber-100 transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <span class="text-[10px] font-black uppercase tracking-widest">${displayDate}</span>
+                                    </div>
+                                ` : `
+                                    <div class="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-gray-200 shadow-sm">
+                                        <input type="date" value="${item.date}" onchange="setPiutangFileDate(${i}, this.value)" onclick="event.stopPropagation()" class="bg-transparent border-0 text-[10px] font-bold text-gray-700 p-0 outline-none w-28 cursor-pointer">
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="removePiutangFile(${i}, event)" class="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </li>
+            `;
+            }).join('');
+        }
+
+        function formatPiutangSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        function setupPiutangForm() {
+            const form = document.getElementById('piutang-form');
+            if (!form) return;
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (selectedPiutangFiles.length === 0) {
+                    Toast.warning('Pilih file terlebih dahulu.');
+                    return;
+                }
+
+                const dupCount = selectedPiutangFiles.filter(f => f.isDuplicate).length;
+                if (dupCount > 0) {
+                    Toast.error(`${dupCount} file sudah ada di sistem. Hapus duplikat sebelum upload.`);
+                    return;
+                }
+
+                const tanggal = document.getElementById('piutang-date').value;
+                if (!tanggal) { Toast.warning('Isi tanggal pembayaran terlebih dahulu.'); return; }
+
+                const btn = document.getElementById('piutang-btn');
+                btn.disabled = true;
+                btn.innerHTML = '<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span class="ml-2 font-bold uppercase tracking-widest">Sedang Mengupload...</span>';
+
+                const progressContainer = document.getElementById('piutang-progress-container');
+                const progressPct = document.getElementById('piutang-progress-pct');
+                const progressBar = document.getElementById('piutang-progress-bar');
+                if (progressContainer) progressContainer.classList.remove('hidden');
+
+                const CONCURRENCY_LIMIT = 5;
+                let uploaded = 0;
+                const total = selectedPiutangFiles.length;
+
+                const uploadTask = async (item) => {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', item.file);
+                        formData.append('zona_id', getEffectiveZonaId());
+                        formData.append('toko_id', ''); // Empty for Piutang category as requested
+                        formData.append('category', 'PIUTANG');
+                        formData.append('tanggal_dokumen', tanggal);
+                        formData.append('tanggal_upload', new Date().toISOString().split('T')[0]);
+                        formData.append('total_jual', item.nominal || 0);
+
+                        await API.upload('/api/files/upload', formData);
+                        uploaded++;
+
+                        const pct = Math.round((uploaded / total) * 100);
+                        if (progressPct) progressPct.textContent = `${pct}%`;
+                        if (progressBar) progressBar.style.width = pct + '%';
+                    } catch (err) {
+                        Toast.error(`Gagal upload "${item.file.name}": ${err.message}`);
+                    }
+                };
+
+                // Concurrent upload in chunks
+                for (let i = 0; i < selectedPiutangFiles.length; i += CONCURRENCY_LIMIT) {
+                    const chunk = selectedPiutangFiles.slice(i, i + CONCURRENCY_LIMIT);
+                    await Promise.all(chunk.map(item => uploadTask(item)));
+                }
+
+                Toast.success(`${uploaded}/${total} file berhasil diupload!`);
+
+                selectedPiutangFiles = [];
+                updatePiutangFileUI();
+                if (progressContainer) progressContainer.classList.add('hidden');
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Upload Bukti Piutang
+                `;
+                loadRecentPiutang();
+            });
+        }
+
+        async function loadRecentPiutang() {
+            const container = document.getElementById('piutang-recent');
+            if (!container) return;
+            try {
+                const { files } = await API.get('/api/files');
+                const piutangFiles = (files || []).filter(f => f.category === 'PIUTANG').slice(0, 5);
+
+                if (piutangFiles.length === 0) {
+                    container.innerHTML = '<p class="text-sm font-medium text-gray-400 text-center py-10 italic">Belum ada riwayat upload hari ini.</p>';
+                    return;
+                }
+                container.innerHTML = piutangFiles.map(f => `
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-[13px] font-bold text-gray-900 group-hover:text-emerald-700 transition-colors truncate max-w-[200px] sm:max-w-xs">${f.nama_file}</p>
+                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">${f.zonas?.nama || 'General'} • ${new Date(f.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            </div>
+                        </div>
+                        <span class="text-[9px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">Success</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p class="text-xs font-bold text-red-400 text-center py-10 uppercase tracking-widest">Gagal memuat riwayat terbaru.</p>';
+            }
+        }
+
+        function truncate(str, n) {
+            return (str.length > n) ? str.substr(0, n - 1) + '...' : str;
+        }
+    </script>
+
+</body>
+
+</html>

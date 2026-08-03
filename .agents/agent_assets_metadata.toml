@@ -1,0 +1,23 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "GTMKXjKPGalxuE_fAbrE0"
+uri = "file://rclone.conf"
+type = "unspecified"
+title = "rclone.conf — konfigurasi storage sensitif"
+description = "File konfigurasi rclone untuk Terabox/Alist. Simpan secara pribadi; jangan commit atau unggah ke repository GitHub."
+
+[[outputs]]
+id = "S_-Cgn990HXELw5zYZHYs"
+uri = "file://data/alist/data.db"
+type = "unspecified"
+title = "Alist data.db — database konfigurasi sensitif"
+description = "Database Alist berisi akun admin, konfigurasi storage Terabox, dan metadata. Simpan secara pribadi; jangan commit ke GitHub."
+
+[[outputs]]
+id = "uk7SQhUbIMruPfMWsscl6"
+uri = "file://data/alist/config.json"
+type = "unspecified"
+title = "Alist config.json — konfigurasi sensitif"
+description = "Konfigurasi Alist termasuk secret internal dan pengaturan database. Simpan secara pribadi; jangan commit ke GitHub."

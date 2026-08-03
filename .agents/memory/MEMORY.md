@@ -1,0 +1,5 @@
+- [Rclone path on Replit](rclone-path.md) — rclone binary harus di workspace, bukan /home/runner/.local/bin yang hilang saat restart
+- [Alist WebDAV permission](alist-webdav-permission.md) — admin user Alist butuh permission=32767 (semua bit) agar WebDAV berfungsi
+- [Alist storage via SQLite](alist-storage-sqlite.md) — POST /api/admin/storage/add selalu return HTML; insert langsung ke x_storages di data.db sebagai workaround
+- [Terabox sync pagination](terabox-sync.md) — gunakan lsjson recursive dan pagination Supabase; jangan mengandalkan batas default 1.000 baris saat deduplikasi
+- [Terabox file streaming](terabox-streaming.md) — preview/download harus membaca stdout child process rclone, bukan ChildProcess object atau LocalStorage

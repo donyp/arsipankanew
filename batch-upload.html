@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Upload | Pusat Arsip Anka</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .excel-table-container {
+            max-height: calc(100vh - 450px);
+            overflow-y: auto;
+        }
+
+        .row-status-pending {
+            color: #64748b;
+        }
+
+        .row-status-ready {
+            color: #d97706;
+        }
+
+        .row-status-uploading {
+            color: #2563eb;
+        }
+
+        .row-status-success {
+            color: #059669;
+        }
+
+        .row-status-error {
+            color: #dc2626;
+        }
+    </style>
+
+    <script>
+        // Cloak the page until Auth and UI checks are done
+        document.documentElement.style.opacity = '0';
+        document.documentElement.classList.add('auth-loading');
+    </script>
+</head>
+
+<body class="bg-[#F0F2F5] min-h-screen text-gray-800 font-sans">
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar (rendered by js/sidebar.js?v=ULTRACLEAN_2026) -->
+    <aside id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 hidden">
+    </aside>
+
+    <!-- Main Content (Default to 0 margin, will be set to ml-64 via JS if not admin_zona) -->
+    <main id="main-content" class="min-h-screen transition-all duration-300">
+        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4">
+            <h2 class="text-xl font-bold text-gray-900">Batch Upload</h2>
+            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Pilih Excel POS atau langsung
+                upload banyak file PDF</p>
+        </header>
+
+        <div class="p-6">
+            <!-- Smart Dropzone -->
+            <div id="excel-step"
+                class="bg-white p-16 text-center border-2 border-dashed border-gray-200 rounded-[2.5rem] hover:border-blue-500 hover:bg-blue-50/30 transition-all group cursor-pointer shadow-xl shadow-blue-500/5">
+                <input type="file" id="batch-input" accept=".pdf, .xlsx, .xls, .csv" multiple class="hidden"
+                    onchange="handleSmartUpload(event)">
+                <label for="batch-input" class="cursor-pointer">
+                    <div
+                        class="w-24 h-24 rounded-[2rem] bg-blue-600 flex items-center justify-center mx-auto mb-8 group-hover:scale-105 shadow-2xl shadow-blue-200 transition-all duration-500">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-black text-gray-900 mb-2">Klik atau Tarik Berkas Ke Sini</h3>
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed">Dukungan
+                        penuh untuk Excel POS dari dashboard OVO/DANA/GOPAY<br>dan unggahan massal berkas PDF secara
+                        bersamaan</p>
+                </label>
+            </div>
+
+            <!-- Table View -->
+            <div id="mapping-step" class="hidden space-y-6 animate-fade-in-up">
+                <div class="flex items-center justify-between px-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 17v-2m3 2v-4m3 2v-6m-8 9h10a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 uppercase tracking-tight">Pratinjau Batch Antrian
+                        </h3>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="resetBatch()"
+                            class="px-6 py-2.5 rounded-xl text-xs font-bold text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-all border border-gray-200">Reset</button>
+                        <button onclick="uploadAllReady()" id="btn-upload-all"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all active:scale-95">Mulai
+                            Upload</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-[2rem] overflow-hidden shadow-xl shadow-blue-500/5 border border-gray-100">
+                    <div class="excel-table-container custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-gray-50/80 backdrop-blur-md z-10 border-b border-gray-100">
+                                <tr>
+                                    <th
+                                        class="pl-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        Status</th>
+                                    <th class="py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        Tanggal</th>
+                                    <th class="py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        Merchant</th>
+                                    <th class="py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        Nominal</th>
+                                    <th
+                                        class="pr-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        Nama Berkas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batch-table-body" class="divide-y divide-gray-50 text-sm font-medium"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js?v=202605101357"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/batch-upload-v11.js?v=1778397265704"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>

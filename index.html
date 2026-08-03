@@ -1,0 +1,282 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Arsip ANKA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .font-inter {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4 font-inter">
+    <div class="w-full max-w-[400px] animate-fade-in-up">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 p-10">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-extrabold text-blue-600 tracking-tight">Arsip ANKA</h1>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Sistem Arsip Invoice ANKA
+                </p>
+            </div>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 ml-1">Username /
+                        Email</label>
+                    <input type="text" id="username" placeholder="Masukkan username" required
+                        class="w-full px-5 py-4 bg-white border border-blue-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-400 transition-all">
+                </div>
+                <div class="relative">
+                    <label
+                        class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 ml-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="password" placeholder="Masukkan password" required
+                            class="w-full px-5 py-4 bg-gray-50 border border-transparent rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:bg-white focus:border-blue-400 transition-all">
+                        <button type="button" onclick="togglePasswordVisibility()"
+                            class="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                            <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" id="login-btn"
+                        class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-200 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-3">
+                        Masuk Sekarang
+                    </button>
+                </div>
+            </form>
+            <div class="mt-12 text-center">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Anka Aksesoris. Internal Use
+                    Only.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Box -->
+    <div id="custom-alert" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAlert()"></div>
+        <div class="relative w-full max-w-[400px] bg-white rounded-[2.5rem] shadow-2xl p-10 transform scale-95 transition-all duration-300 opacity-0"
+            id="alert-content">
+            <div class="text-center">
+                <div
+                    class="w-16 h-16 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">Informasi Sistem</h3>
+                <p id="alert-message"
+                    class="text-sm font-medium text-gray-600 leading-relaxed mb-10 text-pretty text-center">Sistem
+                    sedang dalam perbaikan (Maintenance Mode).</p>
+                <button onclick="closeAlert()"
+                    class="w-full py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-gray-800 transition-all active:scale-95 shadow-xl shadow-gray-200 uppercase tracking-widest text-[11px]">
+                    Oke, Mengerti
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let isMaintenanceActive = false;
+
+        function showAlert(msg) {
+            const modal = document.getElementById('custom-alert');
+            const content = document.getElementById('alert-content');
+            document.getElementById('alert-message').textContent = msg;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeAlert() {
+            const modal = document.getElementById('custom-alert');
+            const content = document.getElementById('alert-content');
+            content.classList.add('scale-95', 'opacity-0');
+            content.classList.remove('scale-100', 'opacity-100');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // Overwrite standard alert
+        window.alert = showAlert;
+
+        // Check for Maintenance Mode on Load
+        async function checkMaintenanceOnLogin() {
+            try {
+                const response = await fetch(`${CONFIG.API_URL}/api/system/maintenance`);
+                const status = await response.json();
+
+                isMaintenanceActive = !!status.isMaintenance;
+
+                if (isMaintenanceActive) {
+                    // Format Date: 12.30 WIB, 14 Juni 2026
+                    let sinceText = '';
+                    if (status.updatedAt) {
+                        const d = new Date(status.updatedAt);
+                        const time = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '.');
+                        const date = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                        sinceText = `sejak : ${time} WIB, ${date}`;
+                    }
+
+                    const noticeEl = document.createElement('div');
+                    noticeEl.className = 'mb-8 p-4 bg-red-50 border border-red-100 rounded-3xl animate-fade-in-up';
+                    noticeEl.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 shadow-inner">
+                                <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-[10px] font-black text-red-600 uppercase tracking-widest leading-none mb-2">System Maintenance</p>
+                                <p class="text-[12px] font-bold text-red-700 leading-tight">Optimasi Sistem Sedang Berjalan</p>
+                                <p class="text-[10px] font-medium text-red-500/80 leading-relaxed mt-1">Akses sementara dibatasi untuk keperluan teknis. Silakan kembali lagi nanti.</p>
+                                ${sinceText ? `<p class="text-[9px] font-bold text-red-400 mt-2 flex items-center gap-1.5 opacity-80 uppercase tracking-wider">
+                                    <span class="w-1 h-1 rounded-full bg-red-300"></span> ${sinceText}
+                                </p>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('login-form').prepend(noticeEl);
+                    setButtonState('disabled');
+                }
+            } catch (err) {
+                console.warn('Gagal mengecek status perbaikan:', err);
+            }
+        }
+
+        function setButtonState(state) {
+            const btn = document.getElementById('login-btn');
+            if (!btn) return;
+
+            if (state === 'disabled') {
+                btn.className = 'w-full py-4 bg-gray-100 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all opacity-70 flex items-center justify-center gap-3';
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg> Tidak Bisa Login`;
+            } else if (state === 'scanning') {
+                // Silent check - keep disabled and original text/state until confirmed
+                btn.disabled = true;
+            } else if (state === 'admin') {
+                btn.className = 'w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-200 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-3 animate-pulse';
+                btn.disabled = false;
+                btn.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 4.908-3.333 9.277-8 10.125a12.866 12.866 0 01-8-10.125c0-.681.057-1.35.166-2.001zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg> Akses Admin Terdeteksi`;
+            } else {
+                btn.className = 'w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-200 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-3';
+                btn.disabled = false;
+                btn.innerHTML = `Masuk Sekarang`;
+            }
+        }
+
+        // Scanning Logic
+        let scanTimeout;
+        async function performScan() {
+            if (!isMaintenanceActive) return;
+
+            const email = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (email.length < 3 || password.length < 4) {
+                setButtonState('disabled');
+                return;
+            }
+
+            // Silent check
+
+            try {
+                const response = await fetch(`${CONFIG.API_URL}/api/auth/verify-admin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const { isAdmin } = await response.json();
+
+                if (isAdmin) {
+                    setButtonState('admin');
+                } else {
+                    setButtonState('disabled');
+                }
+            } catch (err) {
+                setButtonState('disabled');
+            }
+        }
+
+        ['input', 'change'].forEach(evt => {
+            document.getElementById('username').addEventListener(evt, () => {
+                clearTimeout(scanTimeout);
+                scanTimeout = setTimeout(performScan, 800);
+            });
+            document.getElementById('password').addEventListener(evt, () => {
+                clearTimeout(scanTimeout);
+                scanTimeout = setTimeout(performScan, 800);
+            });
+        });
+
+        checkMaintenanceOnLogin();
+
+        function togglePasswordVisibility() {
+            const pwdInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.04m5.752-1.854A9.959 9.959 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21m-4.221-4.221L3 3" />
+                `;
+            } else {
+                pwdInput.type = 'password';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                `;
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<div class="flex items-center justify-center gap-2">
+                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Memproses...</span>
+            </div>`;
+
+            try {
+                // Correct function name from auth.js
+                await loginWithCredentials(username, password);
+            } catch (err) {
+                console.error(err);
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+
+                if (err.status === 401) {
+                    alert('Email atau password salah.');
+                } else if (err.status === 503) {
+                    alert('Sistem sedang dalam perbaikan (Maintenance Mode).');
+                } else {
+                    alert(err.message || 'Terjadi kesalahan sistem. Silakan coba lagi.');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

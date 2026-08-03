@@ -1,0 +1,79 @@
+[
+  {
+    "id": "b3d7bbff-fbb9-4f3a-91fa-b7c17fc8235a",
+    "nama_file": "Instagram post - 10.png",
+    "storage_path": "/ads-media/poster/Instagram post - 10.png",
+    "category": "poster",
+    "deskripsi": "",
+    "ukuran_bytes": 5037347,
+    "uploaded_by": "e9298442-e33e-4221-ba15-e5241ebaf271",
+    "created_at": "2026-04-21T04:15:48.868025+00:00",
+    "deleted_at": null
+  },
+  {
+    "id": "b8d9303a-a6b2-4249-a47a-3af6bcee200c",
+    "nama_file": "Instagram post - 12.png",
+    "storage_path": "/ads-media/poster/Instagram post - 12.png",
+    "category": "poster",
+    "deskripsi": "",
+    "ukuran_bytes": 823978,
+    "uploaded_by": "e9298442-e33e-4221-ba15-e5241ebaf271",
+    "created_at": "2026-04-21T04:15:50.190641+00:00",
+    "deleted_at": null
+  },
+  {
+    "id": "25dbc1b3-8740-4c2f-96ca-dea3a1e1ed1f",
+    "nama_file": "MOCKUP.png",
+    "storage_path": "/arsip/ads-media/stiker/MOCKUP.png",
+    "category": "stiker",
+    "deskripsi": "",
+    "ukuran_bytes": 4005089,
+    "uploaded_by": "e9298442-e33e-4221-ba15-e5241ebaf271",
+    "created_at": "2026-04-21T04:03:11.008963+00:00",
+    "deleted_at": null
+  },
+  {
+    "id": "39220907-2f09-458d-8109-3298a532c52b",
+    "nama_file": "BOX KIRI.pdf",
+    "storage_path": "/arsip/ads-media/stiker/BOX KIRI.pdf",
+    "category": "stiker",
+    "deskripsi": "",
+    "ukuran_bytes": 48925639,
+    "uploaded_by": "e9298442-e33e-4221-ba15-e5241ebaf271",
+    "created_at": "2026-04-21T04:03:10.349086+00:00",
+    "deleted_at": null
+  },
+  {
+    "id": "d0105f4f-fe88-4556-a9ef-955d3021304b",
+    "nama_file": "BOX KANAN.pdf",
+    "storage_path": "/arsip/ads-media/stiker/BOX KANAN.pdf",
+    "category": "stiker",
+    "deskripsi": "",
+    "ukuran_bytes": 48925527,
+    "uploaded_by": "e9298442-e33e-4221-ba15-e5241ebaf271",
+    "created_at": "2026-04-21T04:03:07.463346+00:00",
+    "deleted_at": null
+  },
+  {
+    "id": "d7ab781a-f0d5-49a9-b3b5-6aa33e369139",
+    "nama_file": "Instagram post - 13.png",
+    "storage_path": "/ads-media/poster/Instagram post - 13.png",
+    "category": "poster",
+    "deskripsi": "",
+    "ukuran_bytes": 3065721,
+    "uploaded_by": "e9298442-e33e-4221-ba15-e5241ebaf271",
+    "created_at": "2026-04-21T04:15:51.736433+00:00",
+    "deleted_at": null
+  },
+  {
+    "id": "304565ed-b287-4a95-82d0-c8c7f89954c9",
+    "nama_file": "Instagram post - 14.png",
+    "storage_path": "/ads-media/poster/Instagram post - 14.png",
+    "category": "poster",
+    "deskripsi": "",
+    "ukuran_bytes": 3308488,
+    "uploaded_by": "e9298442-e33e-4221-ba15-e5241ebaf271",
+    "created_at": "2026-04-21T04:15:53.495757+00:00",
+    "deleted_at": null
+  }
+]

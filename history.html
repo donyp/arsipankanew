@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Batch Upload — Pusat Arsip Anka</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function () {
+            try {
+                const userData = localStorage.getItem('user_data');
+                if (userData) {
+                    const user = JSON.parse(userData);
+                    if (user.role === 'admin_zona') {
+                        document.documentElement.classList.add('no-sidebar');
+                    }
+                }
+            } catch (e) { }
+        })();
+    </script>
+
+    <script>
+        // Strengthened Anti-Flash (FOUC) System v2.0
+        // Cloak the page until Auth and UI checks are done
+        document.documentElement.style.opacity = '0';
+        document.documentElement.classList.add('auth-loading');
+    </script>
+</head>
+
+<body class="bg-[#F0F2F5] min-h-screen text-gray-800 font-sans">
+    <div class="flex">
+        <!-- Sidebar -->
+        <!-- Sidebar (rendered by js/sidebar.js?v=ULTRACLEAN_2026) -->
+        <aside id="sidebar"
+            class="sidebar fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 hidden">
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="min-h-screen transition-all duration-300 flex-1 flex flex-col">
+            <!-- Top Bar -->
+            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button onclick="toggleSidebar()"
+                            class="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-gray-100">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Riwayat Batch Upload</h2>
+                            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Lihat riwayat
+                                upload dan kirim notifikasi WA per zona</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-6 space-y-6">
+                <!-- Data Table Card -->
+                <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-blue-500/5 border border-gray-100">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-xl font-extrabold text-gray-900 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            Riwayat Upload Batch
+                        </h3>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+                                    <th class="pb-4 px-5 font-bold">Tanggal</th>
+                                    <th class="pb-4 px-5 font-bold">Oleh</th>
+                                    <th class="pb-4 px-5 font-bold text-center">File Berhasil</th>
+                                    <th class="pb-4 px-5 font-bold text-right pr-6">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batches-body" class="divide-y divide-gray-100">
+                                <!-- Data populated via JS -->
+                            </tbody>
+                        </table>
+
+                        <!-- Empty State -->
+                        <div id="batches-empty" class="hidden py-20 text-center">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-800 mb-4">
+                                <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-gray-400 font-medium">Belum ada riwayat batch upload</h4>
+                            <p class="text-gray-600 text-sm mt-1">Upload file via Batch Upload untuk melihat riwayat di
+                                sini.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="notice-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeNoticeModal()"></div>
+        <div
+            class="relative bg-white rounded-[2rem] p-8 max-w-2xl w-full shadow-2xl border border-gray-100 animate-scale-in max-h-[85vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-gray-900">Template Pesan WhatsApp</h2>
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">Salin pesan untuk
+                        setiap zona dan paste ke grup WA masing-masing.</p>
+                </div>
+                <button onclick="closeNoticeModal()"
+                    class="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div id="notice-panels" class="space-y-4">
+                <!-- Zona panels rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+    <script src="js/sidebar.js?v=ULTRACLEAN_2026"></script>
+
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js?v=1778387279965"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/history.js?v=1778397265704"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+
+</html>

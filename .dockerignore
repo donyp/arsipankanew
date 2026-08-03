@@ -1,0 +1,66 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json.bak
+
+# Logs
+*.log
+server_debug.log
+server_output.log
+
+# Temporary files
+backend/tmp
+data/temp
+alist/data/temp
+
+# Cache
+.cache
+.qodo
+
+# IDE
+.vscode
+.idea
+.DS_Store
+
+# Database backups (keep only active)
+*.db-shm
+*.db-wal
+
+# Dump files (keep only current)
+*_dump.json
+*_dump.html
+error_dump.html
+
+# Test/Debug files
+check_db.js
+check_notifs.js
+fix_cache.js
+setup_alist.js
+diag_chart.js
+
+# Output files
+*.txt
+all_files.txt
+all_rclone_files.txt
+all_db_media.json
+error.txt
+hash.txt
+maintenance_status.json
+live_db_check.json
+sentinel.txt
+ads_media_ls.txt
+
+# Config files (akan menggunakan env vars)
+.env
+.env.local
+.env.*.local
+
+# Other
+rclone_bin
+rclone.exe
+README_DEPLOYMENT.md
