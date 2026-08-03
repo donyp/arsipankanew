@@ -4,3 +4,4 @@
 - [Terabox sync pagination](terabox-sync.md) — gunakan lsjson recursive dan pagination Supabase; jangan mengandalkan batas default 1.000 baris saat deduplikasi
 - [Terabox file streaming](terabox-streaming.md) — preview/download harus membaca stdout child process rclone, bukan ChildProcess object atau LocalStorage
 - [Alist migration safety](alist-migration.md) — copy internal perlu API Alist dengan mount /terabox; listing rekursif Terabox dapat stale dan wajib diverifikasi per folder
+- [Invoice metadata normalization](invoice-metadata-normalization.md) — tipe NON disimpan sebagai `NON` dan tanggal dokumen selalu dinormalisasi ke ISO `YYYY-MM-DD`
