@@ -8,3 +8,4 @@
 - [Maintenance notice details](maintenance-notice-details.md) — detail perbaikan disimpan sebagai daftar bernomor dan dikirim ke notice publik serta notifikasi global
 - [Legacy files schema](legacy-files-schema.md) — kolom sinkronisasi opsional tidak boleh diasumsikan tersedia saat insert metadata upload
 - [Terabox write CAPTCHA](terabox-write-captcha.md) — driver Terabox dapat membaca tetapi menolak upload dengan 405/CAPTCHA; pertahankan fallback lokal sampai cookie diperbarui
+- [Authenticated metadata downloads](authenticated-metadata-downloads.md) — file backup harus diunduh lewat fetch berheader JWT, bukan tautan biasa tanpa token
