@@ -42,7 +42,7 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 
 // Configuration
-const TEST_SERVER_PORT = process.env.PORT || 7860;
+const TEST_SERVER_PORT = process.env.PORT || 5000;
 const TEST_SERVER_URL = `http://localhost:${TEST_SERVER_PORT}`;
 const MAX_WAIT_SYNC = 60000; // 60 seconds
 const SYNC_CHECK_INTERVAL = 1000; // Check every 1 second

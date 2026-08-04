@@ -11,14 +11,20 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.101.1",
+    "@supabase/supabase-js": "^2.109.0",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.22.2",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "ws": "^8.21.2"
+  },
+  "overrides": {
+    "body-parser": "1.20.6",
+    "qs": "6.15.3",
+    "brace-expansion": "2.1.4"
   },
   "devDependencies": {
     "fast-check": "^4.8.0",

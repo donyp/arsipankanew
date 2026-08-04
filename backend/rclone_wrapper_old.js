@@ -9,8 +9,8 @@ const { getSecret } = require('./secretManager');
 
 // Credential storage (loaded at startup via initializeRcloneCredentials)
 let rcloneConfig = {
-    teraboxUser: process.env.TERABOX_USER || 'terabox_user',
-    teraboxPass: process.env.TERABOX_PASS || 'terabox_pass',
+    teraboxUser: process.env.TERABOX_USER || null,
+    teraboxPass: process.env.TERABOX_PASS || null,
     source: 'ENV_VAR_OR_HARDCODED'
 };
 
@@ -691,7 +691,7 @@ async function initializeRcloneCredentials() {
         const password = await getSecret(
             'arsip-alist-password',
             'ALIST_ADMIN_PASSWORD',
-            'AdminArsip2026!'  // Fallback for local dev
+            null
         );
 
         alistCredentials.password = password;
@@ -712,12 +712,12 @@ async function initializeRcloneCredentials() {
             });
             console.log('✅ [RcloneStorage] Storage credentials loaded from ENV');
         } else {
-            alistCredentials.source = 'FALLBACK';
+            alistCredentials.source = 'ENV_OR_SECRET';
             logOperation('initializeRcloneCredentials', { 
-                status: '✅ Credentials loaded from FALLBACK (local development)',
-                credentials_source: 'FALLBACK'
+                status: '✅ Credentials loaded from environment or secret manager',
+                credentials_source: 'ENV_OR_SECRET'
             });
-            console.log('✅ [RcloneStorage] Storage credentials loaded from FALLBACK (local development)');
+            console.log('✅ [RcloneStorage] Storage credentials loaded from environment or secret manager');
         }
 
         return {
@@ -734,12 +734,12 @@ async function initializeRcloneCredentials() {
         console.log('ℹ️ [RcloneStorage] Using default fallback credentials for local development');
 
         // Use hardcoded fallback
-        alistCredentials.password = 'AdminArsip2026!';
-        alistCredentials.source = 'FALLBACK_ERROR';
+        alistCredentials.password = null;
+        alistCredentials.source = 'UNAVAILABLE';
 
         return {
             success: false,
-            source: 'FALLBACK_ERROR',
+            source: 'UNAVAILABLE',
             message: `Credential initialization failed: ${err.message}`
         };
     }

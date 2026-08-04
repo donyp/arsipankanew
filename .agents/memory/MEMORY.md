@@ -1,3 +1,4 @@
+- [Alist offline tool initialization](alist-offline-tools.md) — Alist v3.43 tetap menginisialisasi downloader kosong; kosongkan setting dan anggap warning non-kritis
 - [Rclone path on Replit](rclone-path.md) — rclone binary harus di workspace, bukan /home/runner/.local/bin yang hilang saat restart
 - [Alist WebDAV permission](alist-webdav-permission.md) — admin user Alist butuh permission=32767 (semua bit) agar WebDAV berfungsi
 - [Alist storage via SQLite](alist-storage-sqlite.md) — POST /api/admin/storage/add selalu return HTML; insert langsung ke x_storages di data.db sebagai workaround

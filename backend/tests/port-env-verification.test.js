@@ -5,7 +5,7 @@
  * 1. process.env.PORT is correctly read from environment
  * 2. Startup log appears before binding
  * 3. Success log appears after binding
- * 4. Fallback to port 4000 works when PORT is not set
+ * 4. Fallback to port 5000 works when PORT is not set
  */
 
 const { spawn } = require('child_process');
@@ -93,7 +93,7 @@ describe('PORT Environment Variable Configuration (Task 3.4)', () => {
             console.log(`✅ Server successfully started on port ${testPort}`);
             console.log(`✅ PORT environment variable correctly flows through:`);
             console.log(`   1. Dockerfile ENV PORT=7860 → process.env.PORT`);
-            console.log(`   2. process.env.PORT → const port = process.env.PORT || 4000`);
+            console.log(`   2. process.env.PORT → const port = process.env.PORT || 5000`);
             console.log(`   3. port → app.listen(port, HOST, callback)`);
             console.log(`   4. Startup log appears BEFORE binding`);
             console.log(`   5. Success log appears AFTER binding`);
@@ -113,8 +113,8 @@ describe('PORT Environment Variable Configuration (Task 3.4)', () => {
         }
     }, 15000);
     
-    test('should fallback to port 4000 when PORT env var is not set', async () => {
-        console.log('\n[TEST] Starting server without PORT env var (should use default 4000)...');
+    test('should fallback to port 5000 when PORT env var is not set', async () => {
+        console.log('\n[TEST] Starting server without PORT env var (should use default 5000)...');
         
         const serverProcess = spawn('node', ['server.js'], {
             cwd: path.join(__dirname, '..'),
@@ -133,15 +133,15 @@ describe('PORT Environment Variable Configuration (Task 3.4)', () => {
             console.log('[SERVER OUTPUT]', output);
             
             // Check for startup log with fallback port
-            if (output.includes('🚀 Backend starting on port 4000')) {
+            if (output.includes('🚀 Backend starting on port 5000')) {
                 startupLogFound = true;
-                console.log('✅ Found startup log with fallback port: 4000');
+                console.log('✅ Found startup log with fallback port: 5000');
             }
             
             // Check for listening log with fallback port
-            if (output.includes('✅ Backend listening on port 4000')) {
+            if (output.includes('✅ Backend listening on port 5000')) {
                 listeningLogFound = true;
-                console.log('✅ Found listening log with fallback port: 4000');
+                console.log('✅ Found listening log with fallback port: 5000');
             }
         });
         
@@ -151,14 +151,14 @@ describe('PORT Environment Variable Configuration (Task 3.4)', () => {
         
         try {
             // Wait for server to start on default port
-            await waitForServer(4000, 10000);
+            await waitForServer(5000, 10000);
             
             // Verify fallback behavior
             expect(startupLogFound).toBe(true);
             expect(listeningLogFound).toBe(true);
             
-            console.log('✅ Server successfully started on fallback port 4000');
-            console.log('✅ Fallback logic works: process.env.PORT || 4000');
+            console.log('✅ Server successfully started on fallback port 5000');
+            console.log('✅ Fallback logic works: process.env.PORT || 5000');
             
         } finally {
             // Clean up: kill the server process
@@ -183,13 +183,13 @@ describe('PORT Environment Variable Configuration (Task 3.4)', () => {
         const mockEnv2 = { PORT: '3000' };
         const mockEnv3 = {};
         
-        const port1 = mockEnv1.PORT || 4000;
-        const port2 = mockEnv2.PORT || 4000;
-        const port3 = mockEnv3.PORT || 4000;
+        const port1 = mockEnv1.PORT || 5000;
+        const port2 = mockEnv2.PORT || 5000;
+        const port3 = mockEnv3.PORT || 5000;
         
         expect(port1).toBe('7860');
         expect(port2).toBe('3000');
-        expect(port3).toBe(4000);
+        expect(port3).toBe(5000);
         
         console.log('✅ PORT environment variable logic is correct:');
         console.log(`   - When PORT=7860: uses ${port1}`);

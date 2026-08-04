@@ -32,7 +32,7 @@ async function runBackendInitialization() {
         console.log('[Stage 1] Loading environment variables...');
         require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
-        const PORT = process.env.PORT || 7860;
+        const PORT = Number(process.env.PORT) || 5000;
         const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || null;
         const SUPABASE_URL = process.env.SUPABASE_URL;
 
@@ -62,12 +62,12 @@ async function runBackendInitialization() {
             alistPassword = await getSecret(
                 'arsip-alist-password',
                 'ALIST_ADMIN_PASSWORD',
-                'admin123' // Development fallback only
+                null
             );
             console.log('[SecretManager] ✓ Alist password loaded from Secret Manager/env vars');
         } catch (err) {
             console.warn('[SecretManager] Failed to load Alist password:', err.message);
-            console.warn('[SecretManager] Alist will use default credentials (development only)');
+            console.warn('[SecretManager] Alist credentials are unavailable; storage authentication will fail explicitly');
         }
         console.log('[Stage 3] ✅ Complete\n');
 

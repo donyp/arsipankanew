@@ -26,7 +26,7 @@ const fs = require('fs');
 const os = require('os');
 const request = require('supertest');
 
-const TEST_SERVER_PORT = process.env.PORT || 7860;
+const TEST_SERVER_PORT = process.env.PORT || 5000;
 const TEST_SERVER_URL = `http://localhost:${TEST_SERVER_PORT}`;
 
 // Mocks for file and child_process

@@ -5,7 +5,7 @@
 const CONFIG = {
     // Backend API URL
     // Backend API URL (Empty string means relative to current origin)
-    API_URL: window.location.hostname === 'localhost' ? 'http://localhost:4000' : '',
+    API_URL: '',
 
     // App Constants
     CATEGORIES: [

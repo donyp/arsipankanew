@@ -12,16 +12,16 @@ const LocalStorage = require('./local_storage');
 
 // Configuration for direct Rclone WebDAV connection
 let rcloneConfig = {
-    teraboxUser: process.env.TERABOX_USER || 'terabox_user',
-    teraboxPass: process.env.TERABOX_PASS || 'terabox_pass',
-    source: 'ENV_VAR_OR_HARDCODED'
+    teraboxUser: process.env.TERABOX_USER || null,
+    teraboxPass: process.env.TERABOX_PASS || null,
+    source: 'ENV_VAR'
 };
 
 const alistDomain = process.env.ALIST_URL || 'http://127.0.0.1:5244';
 const alistCredentials = {
     username: process.env.ALIST_ADMIN_USERNAME || 'admin',
-    password: process.env.ALIST_ADMIN_PASSWORD || 'AdminArsip2026!',
-    source: 'FALLBACK'
+    password: process.env.ALIST_ADMIN_PASSWORD || null,
+    source: 'ENV_VAR'
 };
 let alistTokenCache = { token: null, expiry: 0 };
 
@@ -1043,7 +1043,30 @@ const RcloneStorage = {
             throw new Error('Berkas backup lokal tidak ditemukan.');
         }
         await rcloneExec(['copyto', localPath, `${BACKUP_REMOTE}:${remotePath}`]);
+        const remoteListing = await rcloneExec(['lsjson', '--files-only', `${BACKUP_REMOTE}:${remotePath}`]);
+        let remoteFiles;
+        try {
+            remoteFiles = JSON.parse(remoteListing || '[]');
+        } catch (err) {
+            throw new Error(`Upload backup selesai tetapi respons verifikasi storage cadangan tidak valid: ${err.message}`);
+        }
+        const remoteFile = Array.isArray(remoteFiles)
+            ? remoteFiles.find(file => file && file.Name)
+            : null;
+        const localSize = fs.statSync(localPath).size;
+        if (!remoteFile || Number(remoteFile.Size) !== localSize) {
+            throw new Error(`Upload backup selesai tetapi verifikasi ukuran gagal (lokal ${localSize} byte, remote ${remoteFile?.Size ?? 'tidak ditemukan'} byte).`);
+        }
         return true;
+    },
+
+    async verifyBackupStorage() {
+        try {
+            await rcloneExec(['lsjson', '--max-depth', '1', `${BACKUP_REMOTE}:`]);
+            return { healthy: true, detail: `Storage cadangan ${BACKUP_REMOTE} dapat dibaca.` };
+        } catch (err) {
+            return { healthy: false, detail: `Storage cadangan ${BACKUP_REMOTE} gagal diverifikasi: ${err.message}` };
+        }
     },
 
     /**
@@ -1110,10 +1133,10 @@ async function initializeRcloneCredentials() {
         const password = await getSecret(
             'arsip-alist-password',
             'ALIST_ADMIN_PASSWORD',
-            'AdminArsip2026!'
+            null
         );
         alistCredentials.password = password;
-        alistCredentials.source = process.env.ALIST_ADMIN_PASSWORD ? 'ENV' : 'SECRET_OR_FALLBACK';
+        alistCredentials.source = 'ENV';
         rcloneConfig.source = 'RCLONE_CONF + ALIST_API';
         
         logOperation('initializeRcloneCredentials', { 

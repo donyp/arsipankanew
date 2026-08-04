@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 const archiver = require('archiver');
 const RcloneStorage = require('./rclone_wrapper');
 const LocalStorage = require('./local_storage');
@@ -25,8 +26,10 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 initializeSecretManager();
 
 const app = express();
-const port = process.env.PORT || 4000;
+const DEFAULT_PORT = 5000;
+const port = Number(process.env.PORT) || DEFAULT_PORT;
 const BACKUP_DIR = path.join(__dirname, '..', 'data', 'backups');
+const BACKUP_RETENTION_COUNT = Math.max(1, Number(process.env.BACKUP_RETENTION_COUNT) || 30);
 
 console.log('================================================');
 console.log(`[BOOT] Pusat Arsip Anka - v2.1.0-fixed`);
@@ -35,7 +38,7 @@ console.log('================================================');
 
 // Log environment configuration
 console.log('[CONFIG] Reading environment variables...');
-console.log(`[CONFIG] PORT: ${process.env.PORT || 'default 4000'}`);
+console.log(`[CONFIG] PORT: ${process.env.PORT || `default ${DEFAULT_PORT}`}`);
 console.log(`[CONFIG] NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
 console.log(`[CONFIG] SUPABASE_URL: ${process.env.SUPABASE_URL ? 'SET (' + process.env.SUPABASE_URL.substring(0, 20) + '...)' : '❌ NOT SET'}`);
 console.log(`[CONFIG] SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : '❌ NOT SET'}`);
@@ -89,7 +92,8 @@ app.get('/api/health', async (req, res) => {
 // Supabase Admin Client (for DB access, not for auth)
 const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { realtime: { transport: WebSocket } }
 );
 
 // Multer config (memory storage for streaming to Rclone)
@@ -2085,7 +2089,8 @@ app.get('/api/system/health', authenticateToken, authorizeRole('super_admin', 'm
         localStorage: { healthy: fs.existsSync(process.env.STORAGE_PATH || path.join(__dirname, '..', 'data', 'files')), detail: 'LocalStorage' },
         syncQueue: { healthy: queue.summary.failed === 0, detail: `${queue.summary.total} pekerjaan tertunda.` },
         database: { healthy: false, detail: 'Belum diperiksa.' },
-        alist: { healthy: false, detail: 'Belum diperiksa.' }
+        alist: { healthy: false, detail: 'Belum diperiksa.' },
+        backupStorage: { healthy: false, detail: 'Belum diperiksa.' }
     };
     try {
         const { error } = await supabase.from('files').select('id').limit(1);
@@ -2099,6 +2104,12 @@ app.get('/api/system/health', authenticateToken, authorizeRole('super_admin', 'm
     } catch (err) {
         services.alist = { healthy: false, detail: err.message };
     }
+    try {
+        const status = await RcloneStorage.verifyBackupStorage();
+        services.backupStorage = { healthy: Boolean(status.healthy), detail: status.detail };
+    } catch (err) {
+        services.backupStorage = { healthy: false, detail: err.message };
+    }
     const healthy = Object.values(services).every(service => service.healthy);
     // Keep the diagnostic payload readable by the UI even when one service is
     // degraded; the page itself presents the overall unhealthy state.
@@ -2109,7 +2120,7 @@ app.get('/api/system/backups', authenticateToken, authorizeRole('super_admin', '
     try {
         if (!fs.existsSync(BACKUP_DIR)) return res.json({ backups: [] });
         const backups = fs.readdirSync(BACKUP_DIR)
-            .filter(name => name.endsWith('.json'))
+            .filter(name => /^metadata-backup-\d{14}\.json$/.test(name))
             .map(name => {
                 const fullPath = path.join(BACKUP_DIR, name);
                 const stat = fs.statSync(fullPath);
@@ -2164,11 +2175,12 @@ app.post('/api/system/backups', authenticateToken, authorizeRole('super_admin', 
         const fileName = `metadata-backup-${stamp}.json`;
         const fullPath = path.join(BACKUP_DIR, fileName);
         fs.writeFileSync(fullPath, JSON.stringify(snapshot, null, 2));
+        const removedBackups = pruneMetadataBackups();
 
         let remoteBackup = { healthy: false, detail: 'Storage cadangan belum berhasil diisi.' };
         try {
             await RcloneStorage.backupLocalPath(fullPath, `database-backups/${fileName}`);
-            remoteBackup = { healthy: true, detail: 'Backup metadata tersalin ke storage cadangan.' };
+            remoteBackup = { healthy: true, detail: 'Backup metadata tersalin dan diverifikasi di storage cadangan.' };
         } catch (remoteError) {
             remoteBackup.detail = remoteError.message;
         }
@@ -2177,12 +2189,26 @@ app.post('/api/system/backups', authenticateToken, authorizeRole('super_admin', 
             action: 'Create Metadata Backup',
             context: `${fileName}; remote=${remoteBackup.healthy ? 'verified' : 'failed'}`
         });
-        res.json({ success: true, backup: { name: fileName, size: fs.statSync(fullPath).size, createdAt: snapshot.createdAt, remote: remoteBackup } });
+        res.json({ success: true, backup: { name: fileName, size: fs.statSync(fullPath).size, createdAt: snapshot.createdAt, removedBackups, remote: remoteBackup } });
     } catch (err) {
         console.error('[Metadata Backup API] Error:', err.message);
         res.status(500).json({ error: 'Gagal membuat backup metadata: ' + err.message });
     }
 });
+
+function pruneMetadataBackups() {
+    if (!fs.existsSync(BACKUP_DIR)) return 0;
+    const files = fs.readdirSync(BACKUP_DIR)
+        .filter(name => /^metadata-backup-\d{14}\.json$/.test(name))
+        .map(name => {
+            const fullPath = path.join(BACKUP_DIR, name);
+            return { name, fullPath, mtime: fs.statSync(fullPath).mtimeMs };
+        })
+        .sort((a, b) => b.mtime - a.mtime);
+    const stale = files.slice(BACKUP_RETENTION_COUNT);
+    stale.forEach(item => fs.unlinkSync(item.fullPath));
+    return stale.length;
+}
 
 // POST/PUT /api/system/maintenance — Toggle maintenance mode
 app.all('/api/system/maintenance', authenticateToken, authorizeRole('super_admin', 'moderator'), async (req, res) => {
@@ -3854,7 +3880,7 @@ app.delete('/api/fleet/:id', authenticateToken, async (req, res) => {
 // ============================================================
 
 // Task 3.4: Log startup intent before binding
-console.log(`🚀 Backend starting on port ${process.env.PORT || 4000}`);
+console.log(`🚀 Backend starting on port ${process.env.PORT || DEFAULT_PORT}`);
 
 // CRITICAL: Listen on 0.0.0.0 for Docker/Hugging Face compatibility
 // Listening on 'localhost' or '127.0.0.1' only works inside container
@@ -3907,7 +3933,7 @@ const HOST = '0.0.0.0';
 
         console.log('[Stage 1] Loading environment variables...');
         
-        const PORT = process.env.PORT || 7860;
+        const PORT = port;
         const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || null;
 
         console.log(`[Config] PORT: ${PORT}`);
@@ -3934,7 +3960,7 @@ const HOST = '0.0.0.0';
             const alistPassword = await getSecret(
                 'arsip-alist-password',
                 'ALIST_ADMIN_PASSWORD',
-                'admin123' // Development fallback only
+                null
             );
             console.log('[SecretManager] ✓ Alist password loaded from Secret Manager/env vars');
         } catch (err) {
@@ -4023,13 +4049,13 @@ const HOST = '0.0.0.0';
     // Task 3.1: Error handler for port binding failures
     server.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
-            console.error(`Error binding to port ${port}: address already in use`);
+            console.error(`Error binding to port ${PORT}: address already in use`);
             process.exit(1);
         } else if (err.code === 'EACCES') {
-            console.error(`Error binding to port ${port}: permission denied`);
+            console.error(`Error binding to port ${PORT}: permission denied`);
             process.exit(1);
         } else if (err.code === 'ENOTFOUND') {
-            console.error(`Error binding to port ${port}: ${err.message}`);
+            console.error(`Error binding to port ${PORT}: ${err.message}`);
             process.exit(1);
         } else {
             console.error(`Error binding to port ${port}: ${err.message}`);
